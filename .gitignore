@@ -1,0 +1,29 @@
+# Environment & Credentials (NEVER commit secrets)
+.env
+*.env.local
+
+# Databases & Runtime State (Auto-created on boot)
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Local Downloaded PDFs & Tender Attachment Folders
+downloads/*
+!downloads/.gitkeep
+
+# Temporary Scraped Timestamped Spreadsheets
+Scraped_*.xlsx
+
+# System & Editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
