@@ -1208,6 +1208,52 @@
     <!-- MODALS: AUTH, CHECKOUT, SAVE SEARCH, ADMIN EDIT                -->
     <!-- ============================================================== -->
 
+    <!-- SERVER REQUIRED MODAL (FOR GITHUB PAGES STATIC PREVIEW) -->
+    <div class="modal-overlay" id="serverRequiredModal">
+        <div class="modal-card" style="max-width: 540px;">
+            <div class="modal-head" style="background: linear-gradient(135deg, #1e3a8a, #0284c7); color: white;">
+                <h3 id="srvReqTitle" style="display: flex; align-items: center; gap: 8px;">
+                    <span>⚡</span> <span id="srvReqActionName">Python Backend Aavashyak Hai</span>
+                </h3>
+                <button class="modal-close-btn" onclick="closeServerRequiredModal()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 22px;">
+                <div style="background: #fef3c7; border: 1.5px solid #f59e0b; padding: 12px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 0.88rem; color: #92400e; line-height: 1.5;">
+                    <strong>ℹ️ GitHub Pages Online Static Mode:</strong><br>
+                    <span id="srvReqDesc">Aap abhi static GitHub Pages preview dekh rahe hain. Yeh action live eProc2 portal / database se judne ke liye Python server ka istemal karta hai.</span>
+                </div>
+
+                <h4 style="font-size: 0.95rem; margin-bottom: 10px; color: #0f172a;">Ise Run Karne ke 2 Aasan Tarike:</h4>
+                <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px;">
+                        <div style="font-weight: 700; color: #1e3a8a; font-size: 0.88rem; margin-bottom: 4px;">
+                            🖥️ Vikalp 1: Apne Computer par Chalayein (Localhost)
+                        </div>
+                        <div style="font-size: 0.82rem; color: #475569; margin-bottom: 8px; line-height: 1.4;">
+                            <code>c:\e-tender</code> folder me jakar <strong>start_dashboard.bat</strong> par double-click karein, fir browser me <code>http://localhost:8000</code> kholein.
+                        </div>
+                        <button class="range-pill-btn" onclick="navigator.clipboard.writeText('http://localhost:8000'); showToast('📋 http://localhost:8000 copied!');" style="font-size: 0.78rem; background: #e0f2fe; color: #0369a1; border-color: #38bdf8;">
+                            📋 Copy http://localhost:8000
+                        </button>
+                    </div>
+
+                    <div style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 12px; border-radius: 8px;">
+                        <div style="font-weight: 700; color: #047857; font-size: 0.88rem; margin-bottom: 4px;">
+                            ☁️ Vikalp 2: Cloud par Free Deploy Karein (24/7 Live)
+                        </div>
+                        <div style="font-size: 0.82rem; color: #475569; line-height: 1.4;">
+                            Is project ko <strong>Render.com</strong> ya <strong>Railway</strong> par 1-click me deploy kar sakte hain, jisse pure world me koi bhi bina computer on kiye live access kar sakega.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="display: flex; justify-content: flex-end; gap: 10px;">
+                    <button class="btn-top" style="background: #1e3a8a; color: white; border: none; padding: 8px 18px; border-radius: 6px; cursor: pointer; font-weight: 600;" onclick="closeServerRequiredModal()">Samajh Gaya (Close)</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- 1. AUTH MODAL (LOGIN / REGISTER / FORGOT) -->
     <div class="modal-overlay" id="authModal">
         <div class="modal-card">
@@ -1976,6 +2022,27 @@
             }
         }
 
+        // ENVIRONMENT & SERVER MODAL HELPERS
+        function isGitHubPages() {
+            return window.location.hostname.includes('github.io');
+        }
+
+        function showServerRequiredModal(actionName, details) {
+            const modal = document.getElementById('serverRequiredModal');
+            if (modal) {
+                if (actionName) document.getElementById('srvReqActionName').textContent = actionName;
+                if (details) document.getElementById('srvReqDesc').textContent = details;
+                modal.classList.add('active');
+            } else {
+                alert(`⚠️ Python Server Aavashyak Hai: ${details || actionName}`);
+            }
+        }
+
+        function closeServerRequiredModal() {
+            const modal = document.getElementById('serverRequiredModal');
+            if (modal) modal.classList.remove('active');
+        }
+
         // AUTH MODAL FUNCTIONS
         function openAuthModal(tab) {
             document.getElementById('authModal').classList.add('active');
@@ -2020,14 +2087,55 @@
 
         async function handleLoginSubmit(e) {
             e.preventDefault();
-            const email = document.getElementById('loginEmail').value;
+            const email = (document.getElementById('loginEmail').value || '').trim();
             const password = document.getElementById('loginPassword').value;
+
+            // GitHub Pages Static Interactive Demo Mode
+            if (isGitHubPages()) {
+                if (email.includes('employee') || email.includes('tdsc')) {
+                    currentUser = { id: 101, name: "Rahul Kumar (TDSC Staff)", email: email, role: "employee" };
+                    showToast("💼 Logged in as Employee (Demo Preview Mode)!");
+                    updateUserUI();
+                    closeAuthModal();
+                    switchAppView('employee');
+                    return;
+                } else if (email.includes('admin')) {
+                    currentUser = { id: 1, name: "System Admin (Demo)", email: email, role: "admin" };
+                    showToast("👑 Logged in as Admin (Demo Preview Mode)!");
+                    updateUserUI();
+                    closeAuthModal();
+                    switchAppView('admin');
+                    return;
+                } else {
+                    currentUser = { id: 202, name: email.split('@')[0] || "Subscriber", email: email, role: "customer", subscription: { plan_code: "professional", status: "active", plan_name: "Professional Plan" } };
+                    showToast(`Logged in as ${currentUser.name} (Demo Mode)!`);
+                    updateUserUI();
+                    closeAuthModal();
+                    loadDataFromExcel();
+                    return;
+                }
+            }
+
             try {
                 const res = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email, password })
                 });
+                if (!res.ok) {
+                    const text = await res.text().catch(() => '');
+                    if (text.trim().startsWith('<') || res.status === 404) {
+                        showServerRequiredModal("User Login", "Backend server se sampark nahi hua (HTTP 404). Kripya 'start_dashboard.bat' chalayein.");
+                        return;
+                    }
+                    try {
+                        const errData = JSON.parse(text);
+                        alert(errData.error || "Login failed");
+                    } catch (e) {
+                        alert("Login failed (HTTP " + res.status + ")");
+                    }
+                    return;
+                }
                 const data = await res.json();
                 if (data.success) {
                     currentUser = data.user;
@@ -2040,7 +2148,11 @@
                     alert(data.error || "Login failed");
                 }
             } catch (err) {
-                alert("Login request failed: " + err.message);
+                if (err.message && (err.message.includes('Unexpected token') || err.message.includes('JSON'))) {
+                    showServerRequiredModal("User Login", "Server offline hai ya HTML 404 response mila. Kripya Python server (http://localhost:8000) chalayein.");
+                } else {
+                    alert("Login request failed: " + err.message);
+                }
             }
         }
 
@@ -2255,6 +2367,14 @@
             const btn = document.getElementById('btnPayConfirm');
             btn.disabled = true;
             btn.textContent = "⏳ Initializing Razorpay Gateway...";
+
+            if (isGitHubPages()) {
+                closeCheckoutModal();
+                showServerRequiredModal("Razorpay Checkout", "Razorpay order creation aur payment webhook verification ke liye Python server ka chalna aavashyak hai. Apne computer par http://localhost:8000 kholein.");
+                btn.disabled = false;
+                btn.textContent = "💳 Pay via Razorpay Checkout (भुगतान करें)";
+                return;
+            }
 
             try {
                 // 1. Create order on server
@@ -3169,6 +3289,10 @@
         }
 
         async function syncTdscOfficeContractors() {
+            if (isGitHubPages()) {
+                showServerRequiredModal("TDSC Office Sync", "TDSC Office Management System se contractors sync karne ke liye Python server ka chalna zaroori hai. Localhost (http://localhost:8000) kholein.");
+                return;
+            }
             try {
                 showToast("🔄 Connecting to TDSC Office Management System...");
                 const res = await fetch('/api/contractors/sync_tdsc_office', { method: 'POST' });
@@ -3306,8 +3430,15 @@
             resArea.innerHTML = `<div style="text-align: center; padding: 30px; color: #1e3a8a;">⏳ Matching active Bihar eProc tenders against contractor profile...</div>`;
 
             try {
-                const res = await fetch(`/api/contractors/match_tenders?contractorId=${cid}`);
-                const data = await res.json();
+                let data;
+                if (isGitHubPages()) {
+                    const c = allContractors.find(x => x.id == cid) || allContractors[0] || { company_name: "M/s Maa Sharda Construction", category: "Roads & Highways", district: "Patna", budget_slab: "> ₹5Cr" };
+                    const matched = biharTenders.slice(0, 4).map((t, idx) => ({ ...t, matchScore: 95 - idx * 7, matchReasons: ["Category match", "District preference"] }));
+                    data = { success: true, contractor: c, matchedTenders: matched };
+                } else {
+                    const res = await fetch(`/api/contractors/match_tenders?contractorId=${cid}`);
+                    data = await res.json();
+                }
                 if (!data.success) {
                     resArea.innerHTML = `<div style="color: #dc2626; padding: 20px;">${data.error || "Matching error"}</div>`;
                     return;
@@ -3407,8 +3538,26 @@
             document.getElementById('modalSuggestTender').classList.add('active');
 
             try {
-                const res = await fetch(`/api/contractors/match_tenders?tenderId=${t.systemTenderNo || t.tenderId}`);
-                const data = await res.json();
+                let data;
+                if (isGitHubPages()) {
+                    data = {
+                        success: true,
+                        matchedContractors: allContractors.map((c, i) => ({
+                            id: c.id,
+                            company_name: c.name || c.company_name,
+                            contact_person: c.contact_person,
+                            mobile: c.mobile,
+                            category: c.category,
+                            district: c.district,
+                            budget_slab: c.budget_slab,
+                            matchScore: 95 - i * 5,
+                            matchReasons: ["Category affinity", "District availability"]
+                        }))
+                    };
+                } else {
+                    const res = await fetch(`/api/contractors/match_tenders?tenderId=${t.systemTenderNo || t.tenderId}`);
+                    data = await res.json();
+                }
                 if (data.success && data.matchedContractors) {
                     activeSuggestContractors = data.matchedContractors;
                     if (activeSuggestContractors.length > 0) {
@@ -3646,6 +3795,17 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
 
         // PROTECTED EXCEL EXPORT
         async function downloadMasterExcelProtected() {
+            if (isGitHubPages()) {
+                const a = document.createElement('a');
+                a.href = "Bihar_eProc_Tenders_Comprehensive.xlsx";
+                a.download = "Bihar_eProc_Tenders_Comprehensive.xlsx";
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                showToast("📊 Bihar_eProc_Tenders_Comprehensive.xlsx downloaded!");
+                return;
+            }
+
             try {
                 const res = await fetch('/api/export_tenders_xlsx');
                 if (res.status === 403) {
@@ -4090,6 +4250,25 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
         // ACTION MODAL LOGIC
         let activeModalTender = null;
 
+        function formatTenderForModal(t) {
+            return {
+                tenderId: t.tenderId,
+                systemTenderNo: t.systemTenderNo,
+                tenderRefNo: t.refNo,
+                department: t.department,
+                estimatedValueFormatted: t.estimatedValueFormatted,
+                isEstimatedValueHidden: t.isEstimatedValueHidden,
+                detailedDescription: t.detailedDescription || t.description,
+                emd: { amountFormatted: t.emdAmountFormatted, paymentMode: t.emdMode },
+                tenderFee: { amountFormatted: t.tenderFeeFormatted, paymentMode: t.tenderFeeMode },
+                tenderProcessingFee: { amountFormatted: t.processingFeeFormatted },
+                dates: { bidSubmissionDueDate: t.dueDate, bidOpeningDate: t.openDate },
+                termsAndConditionsFiles: (t.termsFiles || []).map(f => ({ title: f.name || "Terms & Conditions", fileName: f.name || "Terms.pdf", webUrl: f.webUrl })),
+                attachmentsFiles: (t.officialFiles || []).map(f => ({ label: f.name || "NIT Document", fileName: f.name || "Notice.pdf", webUrl: f.webUrl })),
+                boqFiles: (t.boqFiles || []).map(f => ({ label: f.name || "BOQ Item Details", fileName: f.name || "BOQ.pdf", webUrl: f.webUrl }))
+            };
+        }
+
         async function openActionModal(tenderId) {
             const overlay = document.getElementById('actionModalOverlay');
             const title = document.getElementById('modalTitle');
@@ -4099,6 +4278,16 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
 
             overlay.classList.add('active');
             title.textContent = `Tender #${tenderId} - Action Details & Attachments`;
+
+            const localTender = allTenders.find(t => t.tenderId == tenderId || t.systemTenderNo == tenderId) || {};
+
+            if (isGitHubPages()) {
+                subtitle.textContent = "Offline Preview Mode (Cached Dataset)";
+                activeModalTender = formatTenderForModal(localTender);
+                renderActionModalContent(activeModalTender);
+                return;
+            }
+
             subtitle.textContent = "Connecting to Bihar eProcurement portal (eproc2.bihar.gov.in)...";
             body.innerHTML = `
                 <div style="text-align: center; padding: 40px; color: #475569;">
@@ -4111,15 +4300,21 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
 
             try {
                 const response = await fetch(`/api/action_detail?id=${tenderId}&download=false`);
+                if (!response.ok) throw new Error("HTTP " + response.status);
                 const details = await response.json();
                 activeModalTender = details;
                 renderActionModalContent(details);
             } catch (err) {
-                body.innerHTML = `
-                    <div style="padding: 24px; text-align: center; color: #dc2626;">
-                        <strong>Action Preview Failed:</strong> ${err.message}
-                    </div>
-                `;
+                if (localTender && localTender.tenderId) {
+                    activeModalTender = formatTenderForModal(localTender);
+                    renderActionModalContent(activeModalTender);
+                } else {
+                    body.innerHTML = `
+                        <div style="padding: 24px; text-align: center; color: #dc2626;">
+                            <strong>Action Preview Failed:</strong> ${err.message}
+                        </div>
+                    `;
+                }
             }
         }
 
@@ -4233,6 +4428,11 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
         }
 
         async function downloadAllModalAttachments(tenderId) {
+            if (isGitHubPages()) {
+                showServerRequiredModal("Document Downloader", "eProc2 portal se files download karke folder me save karne ke liye Python server ka chalna aavashyak hai. Apne computer par http://localhost:8000 kholein.");
+                return;
+            }
+
             const btn = document.getElementById('btnModalDownloadAll');
             if (btn) {
                 btn.disabled = true;
@@ -4246,6 +4446,10 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenderId: tenderId })
                 });
+                if (!res.ok) {
+                    showServerRequiredModal("Document Downloader", "Backend server se sampark nahi hua (HTTP " + res.status + "). Python server running karein.");
+                    return;
+                }
                 const data = await res.json();
                 if (data.success && data.details) {
                     showToast("🎉 Sabhi files folder me download ho gayi hain!");
@@ -4256,7 +4460,16 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     alert("Download failed: " + (data.error || "Unknown"));
                 }
             } catch (err) {
-                alert("Download error: " + err.message);
+                if (err.message && (err.message.includes('Unexpected token') || err.message.includes('JSON'))) {
+                    showServerRequiredModal("Document Downloader", "Server offline hai ya HTML 404 response mila. Kripya Python server (http://localhost:8000) chalayein.");
+                } else {
+                    alert("Download error: " + err.message);
+                }
+            } finally {
+                if (btn) {
+                    btn.disabled = false;
+                    btn.textContent = "📥 Download All Files to Folder";
+                }
             }
         }
 
@@ -4280,6 +4493,11 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
         }
 
         async function refreshSingleTenderLive(tenderId, btn) {
+            if (isGitHubPages()) {
+                showServerRequiredModal("Live Check eProc2", `Tender #${tenderId} ke liye eProc2 portal se naya Due Date extension, PAC cost aur Corrigendum attachments check karne ke liye Python server ka chalna zaroori hai. Localhost (http://localhost:8000) kholein.`);
+                return;
+            }
+
             if (btn) {
                 btn.disabled = true;
                 btn.innerHTML = `⏳ Checking...`;
@@ -4292,6 +4510,20 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ tenderId: tenderId })
                 });
+                if (!res.ok) {
+                    const text = await res.text().catch(() => '');
+                    if (text.trim().startsWith('<') || res.status === 404) {
+                        showServerRequiredModal("Live Check eProc2", "Backend server se sampark nahi hua (HTTP 404). Kripya 'start_dashboard.bat' chalayein.");
+                        return;
+                    }
+                    try {
+                        const errData = JSON.parse(text);
+                        alert("Live check failed: " + (errData.error || "Server issue"));
+                    } catch (e) {
+                        alert("Live check failed: HTTP " + res.status);
+                    }
+                    return;
+                }
                 const data = await res.json();
                 if (data.success && data.updatedTender) {
                     const updated = data.updatedTender;
@@ -4314,7 +4546,11 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     alert("Live check failed: " + (data.error || "Unknown"));
                 }
             } catch (err) {
-                alert("Connection error: " + err.message);
+                if (err.message && (err.message.includes('Unexpected token') || err.message.includes('JSON'))) {
+                    showServerRequiredModal("Live Check eProc2", "Server offline hai ya HTML 404 response mila. Kripya Python server (http://localhost:8000) chalayein.");
+                } else {
+                    alert("Connection error: " + err.message);
+                }
             } finally {
                 if (btn) {
                     btn.disabled = false;
@@ -4391,6 +4627,10 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
         }
 
         async function openTenderFolder(tenderId) {
+            if (isGitHubPages()) {
+                showServerRequiredModal("Open Windows Explorer Folder", "Aapke computer me files aur folder access karne ke liye local machine par server (http://localhost:8000) running hona chahiye.");
+                return;
+            }
             try {
                 const res = await fetch(`/api/open_folder?id=${tenderId}`);
                 const data = await res.json();
