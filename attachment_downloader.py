@@ -1,4 +1,4 @@
-"""
+r"""
 Bihar e-Procurement Attachment & BOQ Downloader Module
 Extracts deep tender details and downloads:
 1. Terms and Conditions attachments
@@ -13,8 +13,14 @@ import re
 import json
 import urllib.request
 import urllib.parse
+import ssl
 from datetime import datetime
 from fetch_eproc_tenders import get_auth_session, BASE_URL, HEADERS, format_currency_inr
+
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 
 DOWNLOADS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "downloads")
 

@@ -5,6 +5,12 @@ import re
 import concurrent.futures
 import time
 import os
+import ssl
+
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 
 BASE_URL = "https://eproc2.bihar.gov.in/EPSV2Web"
 HEADERS = {
@@ -40,7 +46,11 @@ def run_auto_action_crawler(max_tenders=100):
     print(f"[Crawler] Starting automated Action-button click extraction for top {max_tenders} tenders...")
     
     cj = http.cookiejar.CookieJar()
-    opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(cj))
+    ssl_ctx = ssl._create_unverified_context()
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPCookieProcessor(cj),
+        urllib.request.HTTPSHandler(context=ssl_ctx)
+    )
 
     req_page = urllib.request.Request(f"{BASE_URL}/openarea/tenderListingPage.action", data=b"", headers=HEADERS)
     with opener.open(req_page, timeout=15) as r:

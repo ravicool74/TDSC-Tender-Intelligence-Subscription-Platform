@@ -21,7 +21,14 @@ import threading
 import subprocess
 import time
 import re
+import ssl
 from datetime import datetime, timedelta
+
+# Disable SSL verification globally for NIC / eProcurement Indian government portals (which use internal CA chains)
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 
 # Local module imports
 from database import init_database, get_connection

@@ -13,6 +13,11 @@ import time
 import urllib.request
 import urllib.parse
 import ssl
+
+try:
+    ssl._create_default_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
 from datetime import datetime
 from bs4 import BeautifulSoup
 import openpyxl
