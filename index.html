@@ -330,6 +330,16 @@
         <!-- ============================================================== -->
         <section id="viewSearch" class="app-view active">
 
+            <!-- GitHub Pages Preview Notice -->
+            <div id="githubPagesNotice" style="display: none; background: #eff6ff; border: 1.5px solid #3b82f6; color: #1e40af; padding: 10px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 0.88rem; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;">
+                <div>
+                    <strong>🌐 GitHub Pages Online Preview:</strong>
+                    Aap static GitHub Pages par 1,454+ live Bihar eProc2 tenders aur Subscription plans browse kar rahe hain. 
+                    Live scraping, Delta Sync aur Razorpay payment verify karne ke liye Python backend server run karein.
+                </div>
+                <a href="https://github.com/ravicool74/TDSC-Tender-Intelligence-Subscription-Platform" target="_blank" style="background: #1e40af; color: #ffffff; padding: 6px 14px; border-radius: 6px; text-decoration: none; font-weight: 700; white-space: nowrap; font-size: 0.8rem;">📂 View GitHub Repo</a>
+            </div>
+
             <!-- Active Subscription Notice Banner -->
             <div id="subscriptionBanner" class="sub-banner sub-banner-free">
                 <div>
@@ -2120,12 +2130,27 @@
 
         async function loadPlans() {
             try {
-                const res = await fetch('/api/plans');
-                const data = await res.json();
-                if (data.success && data.plans) {
-                    availablePlans = data.plans;
-                    filterPlansByPeriod(activePeriodFilter);
+                let res;
+                try {
+                    res = await fetch('/api/plans');
+                    if (!res.ok) throw new Error('API offline');
+                    const data = await res.json();
+                    if (data.success && data.plans) {
+                        availablePlans = data.plans;
+                    }
+                } catch (e) {
+                    // Fallback for GitHub Pages static preview
+                    availablePlans = [
+                        { code: 'free', name: 'Free Plan (मुफ़्त)', price: 0, billing_period: 'monthly', badge: 'Basic Access', is_active: 1, features: { max_previews: 5, boq_download: false, excel_export: false, whatsapp_alerts: false } },
+                        { code: 'starter', name: 'Starter Pro Edition', price: 1299, billing_period: 'monthly', badge: 'Hot Deal', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: false, whatsapp_alerts: false } },
+                        { code: 'professional', name: 'Professional Plan (पेशेवर)', price: 2499, billing_period: 'monthly', badge: 'Most Popular / सर्वाधिक लोकप्रिय', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: true, whatsapp_alerts: true } },
+                        { code: 'business', name: 'Business / Team Plan (बिज़नेस टीम)', price: 4999, billing_period: 'monthly', badge: 'Enterprise & Multi-User', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: true, whatsapp_alerts: true } },
+                        { code: 'quarterly_pro', name: 'Professional (Quarterly - 3 Months)', price: 5999, billing_period: 'quarterly', badge: 'Save 15%', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: true, whatsapp_alerts: true } },
+                        { code: 'halfyearly_gold', name: 'Gold Contractor (Half-Yearly - 6 Months)', price: 11999, billing_period: 'half_yearly', badge: 'Save 25%', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: true, whatsapp_alerts: true } },
+                        { code: 'annual_vip', name: 'Enterprise VIP (Yearly - 1 Year)', price: 21999, billing_period: 'annual', badge: 'Best Value / 2 Months Free', is_active: 1, features: { max_previews: -1, boq_download: true, excel_export: true, whatsapp_alerts: true } }
+                    ];
                 }
+                filterPlansByPeriod(activePeriodFilter);
             } catch (e) {
                 console.error("Failed loading plans:", e);
             }
@@ -3062,7 +3087,17 @@
 
                 renderContractorsTable(allContractors);
             } catch (err) {
-                console.error("Failed to load contractors:", err);
+                console.warn("API offline - using static demo contractors:", err);
+                allContractors = [
+                    { id: 1, name: "M/s Maa Sharda Construction", contact_person: "Manoj Kumar", mobile: "9835012345", email: "sharda.infra@bihar-contractors.com", district: "Patna", category: "Roads & Highways", class_grade: "Class 1", budget_slab: "> ₹5Cr" },
+                    { id: 2, name: "Patliputra Infra Projects Pvt Ltd", contact_person: "Rajesh Ranjan", mobile: "9431098765", email: "patliputra.infra@bihar-contractors.com", district: "Muzaffarpur", category: "Building Construction", class_grade: "Class 1", budget_slab: "₹2Cr-5Cr" },
+                    { id: 3, name: "Ganga Bridge Engineering Works", contact_person: "Sanjay Singh", mobile: "9934567890", email: "ganga.bridge@bihar-contractors.com", district: "Bhagalpur", category: "Bridges & Culverts", class_grade: "Class 2", budget_slab: "₹50L-2Cr" },
+                    { id: 4, name: "Jal Jeevan Mission Contractors Co.", contact_person: "Amitabh Verma", mobile: "9122334455", email: "jaljeevan.bihar@bihar-contractors.com", district: "Gaya", category: "Water Supply & PHE", class_grade: "Class 2", budget_slab: "₹25L-50L" },
+                    { id: 5, name: "Mithila Solar & Power Grid", contact_person: "Vikram Jha", mobile: "9801234567", email: "mithila.solar@bihar-contractors.com", district: "Darbhanga", category: "Electrical Works", class_grade: "Class 3", budget_slab: "₹0-25L" }
+                ];
+                const statCount = document.getElementById('empStatContractorsCount');
+                if (statCount) statCount.textContent = allContractors.length.toString();
+                renderContractorsTable(allContractors);
             }
         }
 
@@ -3729,7 +3764,14 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
 
         async function loadDataFromExcel() {
             try {
-                const res = await fetch('/api/excel_tenders');
+                let res;
+                try {
+                    res = await fetch('/api/excel_tenders');
+                    if (!res.ok) throw new Error('API offline');
+                } catch (apiErr) {
+                    // Fallback to static JSON file on GitHub Pages
+                    res = await fetch('excel_tenders_view.json');
+                }
                 const data = await res.json();
                 biharTenders = data.tenders || [];
                 document.getElementById('tabBiharCount').textContent = biharTenders.length;
@@ -4478,6 +4520,10 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
 
         // Initialize on window load
         window.addEventListener('DOMContentLoaded', async () => {
+            if (window.location.hostname.includes('github.io')) {
+                const notice = document.getElementById('githubPagesNotice');
+                if (notice) notice.style.display = 'flex';
+            }
             await checkCurrentUserSession();
             await loadPlans();
             await loadDataFromExcel();
