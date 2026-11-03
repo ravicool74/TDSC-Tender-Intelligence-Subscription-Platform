@@ -76,8 +76,35 @@ def sync_single_tender_live(tender_id, download_files=False):
     tid_int = int(tender_id)
     tid_str = str(tender_id)
 
-    # 1. Fetch live from eproc2 portal
-    live_data = fetch_and_download_tender_data(tid_int, download_files=download_files)
+    # Resolve candidate IDs (both tenderId and systemTenderNo)
+    view_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "excel_tenders_view.json")
+    candidate_ids = [tid_int]
+    if os.path.exists(view_path):
+        try:
+            with open(view_path, "r", encoding="utf-8") as f:
+                v_data = json.load(f)
+            t_match = next((t for t in v_data.get("tenders", []) if str(t.get("tenderId")) == tid_str or str(t.get("systemTenderNo")) == tid_str), None)
+            if t_match:
+                if t_match.get("tenderId") and int(t_match["tenderId"]) not in candidate_ids:
+                    candidate_ids.insert(0, int(t_match["tenderId"]))
+                if t_match.get("systemTenderNo") and int(t_match["systemTenderNo"]) not in candidate_ids:
+                    candidate_ids.append(int(t_match["systemTenderNo"]))
+        except Exception:
+            pass
+
+    # 1. Fetch live from eproc2 portal (try candidate IDs)
+    live_data = None
+    last_err = None
+    for cand_id in candidate_ids:
+        try:
+            live_data = fetch_and_download_tender_data(cand_id, download_files=download_files)
+            if live_data and live_data.get("systemTenderNo"):
+                break
+        except Exception as e:
+            last_err = e
+
+    if not live_data:
+        raise last_err or RuntimeError(f"Tender #{tender_id} ka data eProc2 se fetch nahi ho saka.")
 
     # 2. Update action details cache
     cache = load_cache()

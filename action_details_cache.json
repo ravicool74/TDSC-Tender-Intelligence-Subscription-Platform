@@ -40856,5 +40856,65 @@
     "boqFiles": [],
     "totalAttachmentsCount": 3,
     "district": "State-wide / Headquarter"
+  },
+  "142165": {
+    "tenderId": 142360,
+    "systemTenderNo": 142165,
+    "tenderRefNo": "NIT - 02/2026",
+    "estimatedValue": 199791.0,
+    "estimatedValueFormatted": "₹ 199,791.00",
+    "isEstimatedValueHidden": false,
+    "detailedDescription": "Painting and repair work for classrooms from grades 1 to 10 in the administrative building of Dr. Bhimrao Ambedkar Residential School, Sugaon.",
+    "bidSubmissionStartDate": "26-10-2026 10:00 AM",
+    "bidSubmissionDueDate": "01-11-2026 03:00 PM",
+    "bidOpenDate": "01-11-2026 03:30 PM",
+    "physicalDocSubmissionDate": "N/A",
+    "emd": {
+      "amount": 4000.0,
+      "amountFormatted": "₹ 4,000.00",
+      "paymentMode": "Internet Payment Gateway(IPG),Challan|Bank Guarantee"
+    },
+    "tenderFee": {
+      "amount": 500.0,
+      "amountFormatted": "₹ 500.00",
+      "paymentMode": "Internet Payment Gateway(IPG),Challan|"
+    },
+    "tenderProcessingFee": {
+      "amount": 1180.0,
+      "amountFormatted": "₹ 1,180.00",
+      "paymentMode": "Internet Payment Gateway(IPG),Challan|"
+    },
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142165_142360",
+    "termsAndConditionsFiles": [
+      {
+        "title": "Accept all Terms and Conditions as per NIT",
+        "attachFile": "33399/1792838816856_NIT DOCUMENT.pdf|NIT DOCUMENT.pdf",
+        "templategroupId": 33399,
+        "fileName": "NIT DOCUMENT.pdf"
+      }
+    ],
+    "attachmentsFiles": [
+      {
+        "label": "NIT DOCUMENT",
+        "fileName": "NIT DOCUMENT.pdf",
+        "attachFile": "33396/1792838907769_NIT DOCUMENT.pdf|146953|NIT DOCUMENT.pdf",
+        "templategroupId": 33396
+      }
+    ],
+    "boqFiles": [
+      {
+        "label": "BOQ",
+        "fileName": "BOQ.pdf",
+        "attachFile": "33396/1792838901230_BOQ.pdf|94344|BOQ.pdf",
+        "templategroupId": 33396
+      },
+      {
+        "label": "BOQ (Painting and repair work for classrooms from grades 1 to 10 in the administrative building of Dr. Bhimrao Ambedkar Residential School, Sugaon.)",
+        "fileName": "BOQ.pdf",
+        "attachFile": "33414/1792839131765_BOQ.pdf|BOQ.pdf",
+        "templategroupId": 33414
+      }
+    ],
+    "totalAttachmentsCount": 4
   }
 }

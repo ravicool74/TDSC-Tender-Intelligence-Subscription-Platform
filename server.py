@@ -1389,7 +1389,12 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 log_audit("TENDER_DATA_REFRESHED", actor_user_id=user['id'], details={"recordsCount": len(records)}, ip_address=ip_addr)
                 self.send_json({"success": True, "count": len(records), "lastSyncTime": LAST_SYNC_TIME})
             except Exception as e:
-                self.send_json({"success": False, "error": str(e)}, status=500)
+                err_msg = str(e)
+                if "500" in err_msg:
+                    err_msg = "eProc2 Bihar portal par temporary server issue mila (HTTP 500). Kripya 1 minute baad dobara koshish karein."
+                elif "timed out" in err_msg.lower():
+                    err_msg = "eProc2 portal se connection timeout ho gaya."
+                self.send_json({"success": False, "error": err_msg}, status=200)
             return
 
         # 14. Admin: Update Razorpay Merchant Settings (Admin Only)
@@ -1457,7 +1462,12 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 result = scrape_any_url(target_url)
                 self.send_json(result)
             except Exception as e:
-                self.send_json({"success": False, "error": str(e)}, status=500)
+                err_msg = str(e)
+                if "500" in err_msg:
+                    err_msg = "eProc2 Bihar portal par temporary server issue mila (HTTP 500). Kripya 1 minute baad dobara koshish karein."
+                elif "timed out" in err_msg.lower():
+                    err_msg = "eProc2 portal se connection timeout ho gaya."
+                self.send_json({"success": False, "error": err_msg}, status=200)
             return
 
         # 14b. Dedicated Single-Tender Live Refresh from eProc2
@@ -1474,7 +1484,12 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 load_master_tenders(force_reload=True)
                 self.send_json(res)
             except Exception as e:
-                self.send_json({"success": False, "error": str(e)}, status=500)
+                err_msg = str(e)
+                if "500" in err_msg:
+                    err_msg = "eProc2 Bihar portal par temporary server issue mila (HTTP 500). Kripya 1 minute baad dobara koshish karein."
+                elif "timed out" in err_msg.lower():
+                    err_msg = "eProc2 portal se connection timeout ho gaya."
+                self.send_json({"success": False, "error": err_msg}, status=200)
             return
 
         # 15. Preserved: Download attachments
@@ -1488,7 +1503,12 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 details = get_action_details(int(tender_id), download_files=True, force_refresh=True)
                 self.send_json({"success": True, "details": details})
             except Exception as e:
-                self.send_json({"success": False, "error": str(e)}, status=500)
+                err_msg = str(e)
+                if "500" in err_msg:
+                    err_msg = "eProc2 Bihar portal par temporary server issue mila (HTTP 500). Kripya 1 minute baad dobara koshish karein."
+                elif "timed out" in err_msg.lower():
+                    err_msg = "eProc2 portal se connection timeout ho gaya."
+                self.send_json({"success": False, "error": err_msg}, status=200)
             return
 
         # 16. Preserved: Open folder
@@ -1517,7 +1537,12 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 LAST_SYNC_TIME = datetime.now().strftime("%d-%m-%Y %I:%M %p")
                 self.send_json({"success": True, "totalTenders": len(records), "lastSyncTime": LAST_SYNC_TIME})
             except Exception as e:
-                self.send_json({"success": False, "error": str(e)}, status=500)
+                err_msg = str(e)
+                if "500" in err_msg:
+                    err_msg = "eProc2 Bihar portal par temporary server issue mila (HTTP 500). Kripya 1 minute baad dobara koshish karein."
+                elif "timed out" in err_msg.lower():
+                    err_msg = "eProc2 portal se connection timeout ho gaya."
+                self.send_json({"success": False, "error": err_msg}, status=200)
             return
 
         # 18. Preserved: Save User Preferences

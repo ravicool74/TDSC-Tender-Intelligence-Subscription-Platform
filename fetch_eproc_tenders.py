@@ -125,17 +125,41 @@ def get_auth_session():
         urllib.request.HTTPSHandler(context=ssl_ctx)
     )
 
-    req_page = urllib.request.Request(f"{BASE_URL}/openarea/tenderListingPage.action", data=b"", headers=HEADERS)
-    with opener.open(req_page, timeout=20) as resp:
-        page_html = resp.read().decode('utf-8', errors='ignore')
+    auth_token = ""
+    # 1. Primary Method: Official eProc2 REST Token Object API (Fast & Reliable)
+    try:
+        token_req = urllib.request.Request(
+            f"{BASE_URL}/rest/login/provideTokenObject",
+            data=b"",
+            headers={
+                'User-Agent': HEADERS['User-Agent'],
+                'Content-Type': 'application/json',
+                'Referer': f"{BASE_URL}/openarea/tenderListingPage.action"
+            }
+        )
+        with opener.open(token_req, timeout=12) as token_resp:
+            token_json = json.loads(token_resp.read().decode('utf-8', errors='replace'))
+            auth_token = token_json.get('jwt', '')
+    except Exception as e_tok:
+        pass
 
-    token_match = re.search(r'id=["\']Authorization["\'][^>]*value=["\']([^"\']+)["\']', page_html)
-    if not token_match:
-        token_match = re.search(r'value=["\']([^"\']+)["\'][^>]*id=["\']Authorization["\']', page_html)
-
-    auth_token = token_match.group(1) if token_match else ""
+    # 2. Fallback: Parse HTML from listing page if token API failed
     if not auth_token:
-        raise RuntimeError("Failed to extract Authorization bearer token from portal page.")
+        try:
+            req_page = urllib.request.Request(f"{BASE_URL}/openarea/tenderListingPage.action", headers=HEADERS)
+            with opener.open(req_page, timeout=20) as resp:
+                page_html = resp.read().decode('utf-8', errors='ignore')
+
+            token_match = re.search(r'id=["\']Authorization["\'][^>]*value=["\']([^"\']+)["\']', page_html)
+            if not token_match or not token_match.group(1):
+                token_match = re.search(r'value=["\']([^"\']+)["\'][^>]*id=["\']Authorization["\']', page_html)
+            if token_match and token_match.group(1):
+                auth_token = token_match.group(1)
+        except Exception:
+            pass
+
+    if not auth_token:
+        raise RuntimeError("eProc2 Bihar portal se active session token prapt nahi ho saka. Kripya thoda intezar karein.")
     return opener, auth_token
 
 def fetch_live_tenders():
