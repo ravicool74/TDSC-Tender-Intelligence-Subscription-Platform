@@ -1,6 +1,26 @@
-# Bihar eProc2 Tender Intelligence & Paid Subscription Platform
+# TDSC Tender Intelligence & Paid Subscription Platform
 
 Complete SaaS platform transforming the **eproc2.bihar.gov.in** tender management tool into a full **commercial paid tender subscription service**.
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ravicool74/TDSC-Tender-Intelligence-Subscription-Platform)
+
+---
+
+## ☁️ 1-Click Free Cloud Deployment (24/7 Live Online)
+
+Pura platform (Python backend + SQLite Database + Live eProc2 Delta Sync + Contractor CRM + Razorpay) ko 24/7 live internet par chalane ke liye:
+
+### Vikalp A: Render.com (Recommended Free Cloud Hosting)
+1. Upar diye gaye **[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/ravicool74/TDSC-Tender-Intelligence-Subscription-Platform)** button par click karein.
+2. Render.com par **Sign in with GitHub** karein.
+3. Render repository aur `render.yaml` configuration automatically load kar lega.
+4. **"Apply"** par click karein.
+5. 1 se 2 minute me aapka full-stack platform live ho jayega (e.g. `https://tdsc-tender-platform-xxxx.onrender.com`).
+
+### Vikalp B: Railway.app
+1. [Railway.app](https://railway.app) par jayein aur GitHub se login karein.
+2. **"New Project"** -> **"Deploy from GitHub repo"** -> select **`ravicool74/TDSC-Tender-Intelligence-Subscription-Platform`**.
+3. Railway automatically `Procfile` aur `railway.json` detect karke live deploy kar dega.
 
 ---
 

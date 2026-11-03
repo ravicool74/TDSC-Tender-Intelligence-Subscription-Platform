@@ -30,11 +30,7 @@
           "title": "Accept all Terms and Conditions as per NIT",
           "attachFile": "33399/1792838816856_NIT DOCUMENT.pdf|NIT DOCUMENT.pdf",
           "templategroupId": 33399,
-          "fileName": "NIT DOCUMENT.pdf",
-          "localPath": "c:\\e-tender\\downloads\\tender_142165_142360\\terms_and_conditions\\NIT DOCUMENT.pdf",
-          "fileSize": 146953,
-          "downloaded": true,
-          "webUrl": "/downloads/tender_142165_142360/terms_and_conditions/NIT%20DOCUMENT.pdf"
+          "fileName": "NIT DOCUMENT.pdf"
         }
       ],
       "officialFiles": [
@@ -42,11 +38,7 @@
           "label": "NIT DOCUMENT",
           "fileName": "NIT DOCUMENT.pdf",
           "attachFile": "33396/1792838907769_NIT DOCUMENT.pdf|146953|NIT DOCUMENT.pdf",
-          "templategroupId": 33396,
-          "localPath": "c:\\e-tender\\downloads\\tender_142165_142360\\attachments\\NIT DOCUMENT.pdf",
-          "fileSize": 146953,
-          "downloaded": true,
-          "webUrl": "/downloads/tender_142165_142360/attachments/NIT%20DOCUMENT.pdf"
+          "templategroupId": 33396
         }
       ],
       "boqFiles": [
@@ -54,26 +46,19 @@
           "label": "BOQ",
           "fileName": "BOQ.pdf",
           "attachFile": "33396/1792838901230_BOQ.pdf|94344|BOQ.pdf",
-          "templategroupId": 33396,
-          "localPath": "c:\\e-tender\\downloads\\tender_142165_142360\\boq\\BOQ.pdf",
-          "fileSize": 94344,
-          "downloaded": true,
-          "webUrl": "/downloads/tender_142165_142360/boq/BOQ.pdf"
+          "templategroupId": 33396
         },
         {
           "label": "BOQ (Painting and repair work for classrooms from grades 1 to 10 in the administrative building of Dr. Bhimrao Ambedkar Residential School, Sugaon.)",
           "fileName": "BOQ.pdf",
           "attachFile": "33414/1792839131765_BOQ.pdf|BOQ.pdf",
-          "templategroupId": 33414,
-          "localPath": "c:\\e-tender\\downloads\\tender_142165_142360\\boq\\BOQ.pdf",
-          "fileSize": 94344,
-          "downloaded": true,
-          "webUrl": "/downloads/tender_142165_142360/boq/BOQ.pdf"
+          "templategroupId": 33414
         }
       ],
       "tenderFolder": "c:\\e-tender\\downloads\\tender_142165_142360",
       "hasDownloaded": true,
-      "actionExtracted": true
+      "actionExtracted": true,
+      "lastLiveChecked": "03-11-2026 06:44 AM"
     },
     {
       "slNo": 2,
@@ -167,7 +152,8 @@
       ],
       "tenderFolder": "c:\\e-tender\\downloads\\tender_141341_141536",
       "hasDownloaded": false,
-      "actionExtracted": true
+      "actionExtracted": true,
+      "lastLiveChecked": "03-11-2026 06:44 AM"
     },
     {
       "slNo": 3,

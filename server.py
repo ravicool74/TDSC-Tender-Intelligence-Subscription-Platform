@@ -44,7 +44,7 @@ from universal_scraper import scrape_any_url
 from action_details_manager import get_action_details, load_cache, sync_single_tender_live
 from build_unified_dataset import build_comprehensive_unified_dataset
 
-PORT = 8000
+PORT = int(os.environ.get("PORT", 8000))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 PREFS_FILE = os.path.join(DIRECTORY, "user_preferences.json")
 EXCEL_PATH = os.path.join(DIRECTORY, "Bihar_eProc_Tenders_Comprehensive.xlsx")
@@ -1531,7 +1531,10 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
 
 def open_browser():
     time.sleep(1.2)
-    webbrowser.open(f"http://localhost:{PORT}")
+    try:
+        webbrowser.open(f"http://localhost:{PORT}")
+    except Exception:
+        pass
 
 if __name__ == "__main__":
     os.chdir(DIRECTORY)
@@ -1544,13 +1547,15 @@ if __name__ == "__main__":
     with socketserver.TCPServer(("", PORT), PaidTenderRequestHandler) as httpd:
         print("=" * 70)
         print(" TDSC Tender Intelligence & Subscription Platform is LIVE!")
-        print(f" URL: http://localhost:{PORT}")
+        print(f" Listening on port {PORT} (http://0.0.0.0:{PORT})")
         print(" Admin Login:    admin@bihar-etender.in | Password: Admin@Eproc2026")
         print(" Employee Login: employee@tdsc.in       | Password: Employee@Tdsc2026")
-        print(" Press Ctrl+C in this terminal to stop the server.")
         print("=" * 70)
         
-        threading.Thread(target=open_browser, daemon=True).start()
+        # Only open browser when running locally (not in headless cloud containers)
+        is_cloud = bool(os.environ.get("RENDER") or os.environ.get("RAILWAY_ENVIRONMENT") or os.environ.get("DYNO"))
+        if not is_cloud:
+            threading.Thread(target=open_browser, daemon=True).start()
         try:
             httpd.serve_forever()
         except KeyboardInterrupt:
