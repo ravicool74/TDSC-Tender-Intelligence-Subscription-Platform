@@ -2155,9 +2155,9 @@
                 .replace(/'/g, '&#039;');
         }
 
-        function escapeJsString(str) {
+                function escapeJsString(str) {
             if (str === null || str === undefined) return '';
-            return String(str).replace(/\/g, '\\').replace(/'/g, "\'");
+            return String(str).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         }
 
         function getCppApiBase() {
