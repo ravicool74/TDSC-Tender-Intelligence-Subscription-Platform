@@ -288,7 +288,10 @@
         <!-- Center View Navigation Switcher -->
         <nav class="topbar-nav">
             <button class="nav-btn active" id="navSearch" onclick="switchAppView('search')">
-                🔍 Tender Search (खोजें)
+                🔍 Bihar eProc (टेंडर खोजें)
+            </button>
+            <button class="nav-btn" id="navCpp" onclick="switchAppView('cpp')" style="background: linear-gradient(135deg, #065f46, #047857); color: #ffffff; border: 1.5px solid #10b981; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                🇮🇳 Central CPPP Portal (भारत सरकार)
             </button>
             <button class="nav-btn" id="navPlans" onclick="switchAppView('plans')">
                 💎 Plans &amp; Pricing (प्लान्स)
@@ -389,6 +392,7 @@
                     <span style="font-weight: 600;">Quick Presets:</span>
                     <span class="sample-chip" onclick="setScrapeInput('https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.action#latestTenders')">🏛️ Bihar eProc Portal (All Tenders)</span>
                     <span class="sample-chip" onclick="setScrapeInput('https://etenders.gov.in/eprocure/app')">🇮🇳 Central e-Procurement Portal (CPPP)</span>
+                    <button class="sample-chip" style="background: #ecfdf5; border: 1.5px solid #10b981; color: #065f46; font-weight: 700; cursor: pointer;" onclick="switchAppView(\'cpp\'); openCppCrawlerModal();">🇮🇳 Launch CPPP Live User-Controlled Extractor</button>
                 </div>
             </div>
 
@@ -1780,6 +1784,145 @@
     </div>
 
     <!-- TOAST POPUP -->
+    
+    <!-- ============================================================== -->
+    <!-- MODAL: CPPP USER-CONTROLLED LIVE EXTRACTOR & MANUAL CAPTCHA    -->
+    <!-- ============================================================== -->
+    <div class="modal-overlay" id="cppCrawlerModal">
+        <div class="modal-card modal-large" style="max-width: 680px;">
+            <div class="modal-head" style="background: linear-gradient(135deg, #064e3b, #047857);">
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <span>🇮🇳</span> CPPP Live Extractor &amp; Manual CAPTCHA
+                </h3>
+                <button class="modal-close-btn" onclick="closeCppCrawlerModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.85rem; color: #065f46;">
+                    <strong>🛡️ User-Controlled Compliant Crawler:</strong>
+                    Portal CAPTCHA is displayed below for you to solve manually. The engine extracts the search results and deep-dives into tender details politely (1-2s delay), automatically deduplicating against existing records.
+                </div>
+
+                <!-- Step 1: Portal Mode Selection -->
+                <div style="margin-bottom: 14px;">
+                    <label class="control-label" style="font-weight: 700;">Select CPPP Portal Mode:</label>
+                    <div style="display: flex; gap: 10px; margin-top: 6px;">
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
+                            <input type="radio" name="cppCrawlMode" value="active_tenders" checked onchange="reloadCppCaptcha()">
+                            <strong>More... / Active Tenders</strong> (FrontEndLatestActiveTenders)
+                        </label>
+                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
+                            <input type="radio" name="cppCrawlMode" value="advanced_search" onchange="reloadCppCaptcha()">
+                            <strong>Advanced Search</strong> (FrontEndAdvancedSearch)
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Step 2: Live Captcha Display & User Input -->
+                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+                        <span style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">🔐 Live Portal CAPTCHA:</span>
+                        <button type="button" class="btn-top" style="padding: 4px 10px; font-size: 0.78rem; background: #e2e8f0; color: #334155; border: none;" onclick="reloadCppCaptcha()">
+                            🔄 Reload Captcha
+                        </button>
+                    </div>
+                    
+                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 10px;">
+                        <div id="cppCaptchaContainer" style="background: white; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 150px; min-height: 48px; display: flex; align-items: center; justify-content: center;">
+                            <span id="cppCaptchaLoading" style="color: #64748b; font-size: 0.82rem;">Fetching live captcha...</span>
+                            <img id="cppCaptchaImg" src="" alt="Live Captcha" style="display: none; height: 42px; border-radius: 4px;">
+                        </div>
+                        <div style="flex-grow: 1;">
+                            <input type="text" id="cppCaptchaInput" class="form-control" placeholder="Enter CAPTCHA text here..." style="font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;" autocomplete="off">
+                        </div>
+                    </div>
+                    <div id="cppCaptchaError" style="display: none; color: #dc2626; font-size: 0.82rem; font-weight: 600; margin-top: 4px;">
+                        ⚠️ Invalid Captcha! Please enter the new letters shown above.
+                    </div>
+                </div>
+
+                <!-- Optional Filters -->
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                    <div>
+                        <label class="control-label">Tender ID (Optional):</label>
+                        <input type="text" id="cppCrawlTenderId" class="form-control" placeholder="e.g. 2026_DOP_933186_1">
+                    </div>
+                    <div>
+                        <label class="control-label">Tender Title / Keyword (Optional):</label>
+                        <input type="text" id="cppCrawlKeyword" class="form-control" placeholder="e.g. Civil Maintenance, Postal, IIT...">
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <button type="button" id="btnSubmitCppCrawl" class="btn-subscribe btn-sub-primary" style="background: #047857; margin-bottom: 14px;" onclick="submitCppCaptchaSearch()">
+                    <span id="cppCrawlSpinner" style="display: none;">⏳ </span>
+                    <span id="cppCrawlBtnText">🚀 Search &amp; Crawl Central Tenders (सर्च और डेटा खींचें)</span>
+                </button>
+
+                <!-- Live Crawl Status & Pagination Traversal Feedback -->
+                <div id="cppCrawlFeedback" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 12px 16px; margin-top: 10px;">
+                    <div style="font-weight: 700; color: #166534; margin-bottom: 4px;" id="cppFeedbackMsg">Crawl Completed!</div>
+                    <div style="font-size: 0.84rem; color: #14532d; display: flex; gap: 16px; flex-wrap: wrap;" id="cppFeedbackStats">
+                        <!-- Stats filled dynamically -->
+                    </div>
+                    <div id="cppPaginationBox" style="margin-top: 10px; display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e3a8a;">Next Pages Available:</span>
+                        <div id="cppPageButtons" style="display: inline-flex; gap: 4px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: CPPP PASTE HTML / OFFLINE IMPORTER                      -->
+    <!-- ============================================================== -->
+    <div class="modal-overlay" id="cppPasteModal">
+        <div class="modal-card modal-large" style="max-width: 680px;">
+            <div class="modal-head" style="background: linear-gradient(135deg, #1e3a8a, #0369a1);">
+                <h3 style="display: flex; align-items: center; gap: 8px;">
+                    <span>📋</span> Paste CPPP Portal HTML (Search Results or Detail Page)
+                </h3>
+                <button class="modal-close-btn" onclick="closeCppPasteModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <p style="font-size: 0.85rem; color: #64748b; margin-top: 0;">
+                    Agar aapne eprocure.gov.in browser me kholi hui hai, toh search result page ya tender detail page ka Source Code (HTML) yahan paste karein. Duplicate records automatically skip ho jayenge.
+                </p>
+                <textarea id="cppPasteHtmlInput" class="form-control" rows="10" placeholder="Paste HTML source here (<table id='table'>... or FrontEndTenderDetails)..." style="font-family: monospace; font-size: 0.8rem;"></textarea>
+                
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 14px;">
+                    <button type="button" class="btn-top" style="background: #e2e8f0; color: #334155; border: none;" onclick="closeCppPasteModal()">Cancel</button>
+                    <button type="button" class="btn-top btn-sub-primary" style="background: #0284c7; color: white;" onclick="submitCppPasteHtml()">
+                        📥 Extract &amp; Deduplicate into CPPP Store
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- MODAL: CPPP TENDER DETAIL & DOCUMENTS DEEP DIVE                -->
+    <!-- ============================================================== -->
+    <div class="modal-overlay" id="cppTenderDetailModal">
+        <div class="modal-card modal-large" style="max-width: 860px;">
+            <div class="modal-head" style="background: linear-gradient(135deg, #064e3b, #047857);">
+                <div>
+                    <h3 id="cppDetailModalTitle" style="font-size: 1.15rem; margin: 0;">Tender Details</h3>
+                    <div id="cppDetailModalRef" style="font-size: 0.8rem; opacity: 0.9; margin-top: 2px;"></div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <button id="cppDetailModalShortlistBtn" class="btn-top" style="background: #FEFCBF; color: #975A16; border: 1px solid #D69E2E; font-weight: 700; padding: 4px 10px;" onclick="toggleCppShortlistFromModal()">
+                        ⭐ Shortlist
+                    </button>
+                    <button class="modal-close-btn" onclick="closeCppTenderDetailModal()">&times;</button>
+                </div>
+            </div>
+            <div class="modal-body" id="cppDetailModalBody">
+                <!-- Dynamically rendered detailed sections -->
+            </div>
+        </div>
+    </div>
+
     <div class="toast-popup" id="toastPopup">Notification message</div>
 
 
@@ -1804,6 +1947,698 @@
         }
 
         // VIEW SWITCHER
+        
+        // ==============================================================
+        // CENTRAL CPPP E-PROCUREMENT (eprocure.gov.in) CONTROLLER
+        // ==============================================================
+        let cppTendersData = [];
+        let cppActiveSessionId = "";
+        let cppLastPagination = null;
+        let currentViewingCppTender = null;
+
+        // View Switcher integration for CPPP
+        const origSwitchAppView = switchAppView;
+        switchAppView = function(viewId) {
+            origSwitchAppView(viewId);
+            if (viewId === 'cpp') {
+                const viewCpp = document.getElementById('viewCpp');
+                const navCpp = document.getElementById('navCpp');
+                if (viewCpp) viewCpp.classList.add('active');
+                if (navCpp) navCpp.classList.add('active');
+                loadCppTenders();
+            }
+        };
+
+        // Load CPPP Tenders from Server
+        async function loadCppTenders() {
+            try {
+                const resp = await fetch('/api/cpp/tenders?limit=150');
+                const data = await resp.json();
+                if (data.success) {
+                    cppTendersData = data.tenders || [];
+                    
+                    // Update stats
+                    const stats = data.stats || {};
+                    document.getElementById('statCppTotalCount').textContent = (stats.total_count || cppTendersData.length).toLocaleString();
+                    document.getElementById('statCppTotalPAC').textContent = `₹ ${(stats.total_value_cr || 0).toFixed(2)} Cr`;
+                    document.getElementById('statCppShortlistCount').textContent = (stats.shortlisted_count || 0).toLocaleString();
+                    document.getElementById('statCppDeptCount').textContent = (stats.unique_departments || 0).toLocaleString();
+
+                    populateCppDropdowns();
+                    renderCppTenders(cppTendersData);
+                }
+            } catch (e) {
+                console.error("[CPP] Load error:", e);
+            }
+        }
+
+        // Populate Department and Location Dropdowns
+        function populateCppDropdowns() {
+            const deptSelect = document.getElementById('cppFilterDept');
+            const locSelect = document.getElementById('cppFilterLocation');
+            if (!deptSelect || !locSelect) return;
+
+            const depts = new Set();
+            const locs = new Set();
+            cppTendersData.forEach(t => {
+                if (t.department) depts.add(t.department);
+                if (t.state_district) locs.add(t.state_district);
+            });
+
+            // Retain selection
+            const curDept = deptSelect.value;
+            deptSelect.innerHTML = '<option value="all">All Departments (सभी विभाग)</option>';
+            Array.from(depts).sort().forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d.length > 50 ? d.substring(0, 50) + '...' : d;
+                deptSelect.appendChild(opt);
+            });
+            if (curDept) deptSelect.value = curDept;
+
+            const curLoc = locSelect.value;
+            locSelect.innerHTML = '<option value="all">All Locations (सभी राज्य/स्थान)</option>';
+            Array.from(locs).sort().forEach(l => {
+                const opt = document.createElement('option');
+                opt.value = l;
+                opt.textContent = l;
+                locSelect.appendChild(opt);
+            });
+            if (curLoc) locSelect.value = curLoc;
+        }
+
+        // Render CPPP Table Rows
+        function renderCppTenders(tenders) {
+            const tbody = document.getElementById('cppTenderTableBody');
+            if (!tbody) return;
+
+            if (!tenders || tenders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 40px; color: #64748b;">
+                            <div style="font-size: 1.8rem; margin-bottom: 6px;">🔍</div>
+                            <strong>No Central CPPP Tenders Found Matching Criteria</strong>
+                            <div style="font-size: 0.82rem; margin-top: 4px;">Click "🚀 Portal Extractor" to crawl fresh tenders from eprocure.gov.in.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let rowsHtml = '';
+            tenders.forEach((t, idx) => {
+                const tid = t.tender_id || t.canonical_key || 'TENDER';
+                const ref = t.tender_ref_no || '-';
+                const title = t.title || t.work_description || '-';
+                const org = t.organisation_chain || t.department || '-';
+                const loc = t.state_district || 'Central / Pan-India';
+                const valFmt = t.tender_value_formatted || `₹ ${(t.tender_value_inr || 0).toLocaleString()}`;
+                const emdFmt = t.emd_amount_formatted || (t.emd_amount_inr ? `₹ ${t.emd_amount_inr.toLocaleString()}` : 'Nil');
+                const closing = t.bid_closing_date || t.bid_submission_end_date || '-';
+                const isSl = Boolean(t.is_shortlisted);
+
+                rowsHtml += `
+                    <tr style="${isSl ? 'background: #fefce8;' : ''}">
+                        <td style="text-align: center; font-weight: 600; color: #64748b;">${idx + 1}</td>
+                        <td>
+                            <div style="font-weight: 700; color: #065f46; font-size: 0.85rem;">${escapeHtml(tid)}</div>
+                            <div style="font-size: 0.74rem; color: #64748b; margin-top: 2px;">Ref: ${escapeHtml(ref)}</div>
+                        </td>
+                        <td>
+                            <div style="font-weight: 600; color: #0f172a; font-size: 0.86rem; line-height: 1.35; margin-bottom: 4px;">
+                                ${escapeHtml(title)}
+                            </div>
+                            <div style="font-size: 0.75rem; color: #475569; display: flex; align-items: center; gap: 4px;">
+                                <span>🏛️</span>
+                                <span>${escapeHtml(org.length > 75 ? org.substring(0, 75) + '...' : org)}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <span class="district-badge" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd;">
+                                📍 ${escapeHtml(loc)}
+                            </span>
+                        </td>
+                        <td style="text-align: right; font-weight: 800; color: #1e3a8a; font-size: 0.92rem; white-space: nowrap;">
+                            ${escapeHtml(valFmt)}
+                            <div style="font-size: 0.7rem; color: #64748b; font-weight: 500;">${escapeHtml(t.budget_slab || '')}</div>
+                        </td>
+                        <td style="text-align: right; font-weight: 600; color: #475569; font-size: 0.82rem; white-space: nowrap;">
+                            ${escapeHtml(emdFmt)}
+                        </td>
+                        <td style="text-align: center; font-size: 0.8rem; font-weight: 600; color: #991b1b; white-space: nowrap;">
+                            ${escapeHtml(closing)}
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" onclick="toggleCppShortlist('${escapeJsString(tid)}')" style="background: none; border: none; font-size: 1.25rem; cursor: pointer; color: ${isSl ? '#d97706' : '#cbd5e1'};" title="${isSl ? 'Remove from Shortlist' : 'Add to Shortlist'}">
+                                ${isSl ? '★' : '☆'}
+                            </button>
+                        </td>
+                        <td style="text-align: center;">
+                            <button type="button" class="btn-action-view" style="background: linear-gradient(135deg, #065f46, #047857); padding: 5px 10px;" onclick="openCppTenderDetail('${escapeJsString(tid)}')">
+                                🔍 Details
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        // Apply Client-Side Filters for CPPP
+        function applyCppFilters() {
+            const query = (document.getElementById('cppSearchInput')?.value || '').toLowerCase().trim();
+            const slab = document.getElementById('cppFilterSlab')?.value || 'all';
+            const dept = document.getElementById('cppFilterDept')?.value || 'all';
+            const loc = document.getElementById('cppFilterLocation')?.value || 'all';
+            const slOnly = Boolean(document.getElementById('cppShortlistOnly')?.checked);
+
+            const filtered = cppTendersData.filter(t => {
+                if (slOnly && !t.is_shortlisted) return false;
+                if (slab !== 'all' && (t.budget_slab || '').toLowerCase() !== slab.toLowerCase()) return false;
+                if (dept !== 'all' && (t.department || '') !== dept) return false;
+                if (loc !== 'all' && (t.state_district || '') !== loc) return false;
+
+                if (query) {
+                    const haystack = `${t.tender_id || ''} ${t.tender_ref_no || ''} ${t.title || ''} ${t.organisation_chain || ''} ${t.department || ''} ${t.state_district || ''}`.toLowerCase();
+                    if (!haystack.includes(query)) return false;
+                }
+                return true;
+            });
+
+            renderCppTenders(filtered);
+        }
+
+        // Toggle CPPP Shortlist
+        async function toggleCppShortlist(tenderId) {
+            try {
+                const resp = await fetch('/api/cpp/toggle_shortlist', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ tender_id: tenderId })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    // Update local state
+                    const target = cppTendersData.find(t => (t.tender_id || t.canonical_key) === tenderId);
+                    if (target) {
+                        target.is_shortlisted = res.is_shortlisted;
+                        showToast(res.is_shortlisted ? "★ Tender added to CPPP Shortlist!" : "Tender removed from CPPP Shortlist.");
+                        applyCppFilters();
+                        // Update shortlist count
+                        const slCount = cppTendersData.filter(t => t.is_shortlisted).length;
+                        document.getElementById('statCppShortlistCount').textContent = slCount.toLocaleString();
+                    }
+                }
+            } catch (e) {
+                showToast("Shortlist toggle failed: " + e.message);
+            }
+        }
+
+        // Open CPPP Live Crawler Modal
+        function openCppCrawlerModal() {
+            document.getElementById('cppCrawlerModal').classList.add('active');
+            reloadCppCaptcha();
+        }
+
+        function closeCppCrawlerModal() {
+            document.getElementById('cppCrawlerModal').classList.remove('active');
+        }
+
+        // Fetch Live Captcha from eprocure.gov.in
+        async function reloadCppCaptcha() {
+            const loading = document.getElementById('cppCaptchaLoading');
+            const img = document.getElementById('cppCaptchaImg');
+            const errBox = document.getElementById('cppCaptchaError');
+            const input = document.getElementById('cppCaptchaInput');
+            
+            if (loading) loading.style.display = 'block';
+            if (img) img.style.display = 'none';
+            if (errBox) errBox.style.display = 'none';
+            if (input) input.value = '';
+
+            const modeRadios = document.getElementsByName('cppCrawlMode');
+            let mode = 'active_tenders';
+            for (let r of modeRadios) {
+                if (r.checked) mode = r.value;
+            }
+
+            try {
+                const resp = await fetch('/api/cpp/session/start', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ mode: mode })
+                });
+                const res = await resp.json();
+                if (res.success && res.captcha_image) {
+                    cppActiveSessionId = res.session_id;
+                    img.src = res.captcha_image;
+                    img.style.display = 'block';
+                    loading.style.display = 'none';
+                    input.focus();
+                } else {
+                    loading.textContent = res.error || "Failed to load live portal captcha";
+                }
+            } catch (e) {
+                if (loading) loading.textContent = "Connection error to portal: " + e.message;
+            }
+        }
+
+        // Submit Captcha & Run Crawl
+        async function submitCppCaptchaSearch() {
+            const captchaText = (document.getElementById('cppCaptchaInput')?.value || '').trim();
+            const errBox = document.getElementById('cppCaptchaError');
+            const btn = document.getElementById('btnSubmitCppCrawl');
+            const spinner = document.getElementById('cppCrawlSpinner');
+            const btnText = document.getElementById('cppCrawlBtnText');
+            const feedbackBox = document.getElementById('cppCrawlFeedback');
+            const feedbackMsg = document.getElementById('cppFeedbackMsg');
+            const feedbackStats = document.getElementById('cppFeedbackStats');
+
+            if (!captchaText) {
+                if (errBox) {
+                    errBox.textContent = "Please type the letters shown in the CAPTCHA image.";
+                    errBox.style.display = 'block';
+                }
+                document.getElementById('cppCaptchaInput')?.focus();
+                return;
+            }
+
+            if (errBox) errBox.style.display = 'none';
+            if (btn) btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline-block';
+            if (btnText) btnText.textContent = "Crawling eprocure.gov.in (Please wait)...";
+
+            const tenderId = document.getElementById('cppCrawlTenderId')?.value || '';
+            const keyword = document.getElementById('cppCrawlKeyword')?.value || '';
+
+            try {
+                const resp = await fetch('/api/cpp/session/submit_captcha', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: cppActiveSessionId,
+                        captcha_text: captchaText,
+                        tender_id: tenderId,
+                        tender_title: keyword,
+                        max_details: 15
+                    })
+                });
+                const res = await resp.json();
+
+                if (!res.success && res.captcha_error) {
+                    // Captcha was wrong
+                    if (errBox) {
+                        errBox.textContent = "⚠️ " + (res.error || "Invalid Captcha! Try again.");
+                        errBox.style.display = 'block';
+                    }
+                    if (res.captcha_image) {
+                        document.getElementById('cppCaptchaImg').src = res.captcha_image;
+                    }
+                    document.getElementById('cppCaptchaInput').value = '';
+                    document.getElementById('cppCaptchaInput').focus();
+                } else if (res.success) {
+                    // Success!
+                    feedbackBox.style.display = 'block';
+                    feedbackMsg.textContent = `✅ Successfully Extracted & Deduplicated!`;
+                    feedbackStats.innerHTML = `
+                        <span><strong>Found:</strong> ${res.tenders_found}</span>
+                        <span><strong>Added (New):</strong> <span style="color:#166534; font-weight:700;">+${res.added}</span></span>
+                        <span><strong>Duplicates Skipped:</strong> <span style="color:#d97706; font-weight:700;">${res.skipped_duplicates}</span></span>
+                        <span><strong>Total in System:</strong> ${res.total_in_system}</span>
+                    `;
+
+                    // Handle Tapestry pagination continuation
+                    const pagBox = document.getElementById('cppPaginationBox');
+                    const pageBtns = document.getElementById('cppPageButtons');
+                    if (res.pagination && res.pagination.available_pages && res.pagination.available_pages.length > 0) {
+                        pagBox.style.display = 'flex';
+                        pageBtns.innerHTML = '';
+                        res.pagination.available_pages.forEach(p => {
+                            const pb = document.createElement('button');
+                            pb.className = 'btn-top';
+                            pb.style.padding = '3px 8px';
+                            pb.style.fontSize = '0.78rem';
+                            pb.textContent = `Page ${p.page} ➡️`;
+                            pb.onclick = () => crawlCppPage(p.url, p.page);
+                            pageBtns.appendChild(pb);
+                        });
+                    } else {
+                        pagBox.style.display = 'none';
+                    }
+
+                    showToast(`Imported ${res.added} new tenders. ${res.skipped_duplicates} duplicates skipped.`);
+                    loadCppTenders();
+                } else {
+                    showToast(res.error || "Crawl failed");
+                }
+            } catch (e) {
+                showToast("Request error: " + e.message);
+            } finally {
+                if (btn) btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+                if (btnText) btnText.textContent = "🚀 Search & Crawl Central Tenders (सर्च और डेटा खींचें)";
+            }
+        }
+
+        // Traverse Next Page
+        async function crawlCppPage(pageUrl, pageNum) {
+            showToast(`Fetching CPPP Page ${pageNum}...`);
+            try {
+                const resp = await fetch('/api/cpp/session/next_page', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        session_id: cppActiveSessionId,
+                        page_url: pageUrl
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast(`Page ${pageNum}: Added ${res.added} tenders. (${res.skipped_duplicates} duplicates skipped)`);
+                    loadCppTenders();
+                } else {
+                    showToast(res.error || `Failed fetching Page ${pageNum}`);
+                }
+            } catch (e) {
+                showToast("Error traversing page: " + e.message);
+            }
+        }
+
+        // Paste HTML Modal
+        function openCppPasteModal() {
+            document.getElementById('cppPasteModal').classList.add('active');
+            document.getElementById('cppPasteHtmlInput').value = '';
+            document.getElementById('cppPasteHtmlInput').focus();
+        }
+
+        function closeCppPasteModal() {
+            document.getElementById('cppPasteModal').classList.remove('active');
+        }
+
+        async function submitCppPasteHtml() {
+            const rawHtml = document.getElementById('cppPasteHtmlInput')?.value || '';
+            if (!rawHtml.trim()) {
+                showToast("Please paste HTML content first.");
+                return;
+            }
+
+            try {
+                const resp = await fetch('/api/cpp/import_html', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ html_content: rawHtml })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    const ir = res.import_result;
+                    showToast(`HTML Extracted: Added ${ir.added} tenders. (${ir.skipped_duplicates} duplicates skipped)`);
+                    closeCppPasteModal();
+                    loadCppTenders();
+                } else {
+                    showToast("Error parsing HTML: " + res.error);
+                }
+            } catch (e) {
+                showToast("Import error: " + e.message);
+            }
+        }
+
+        // Open CPPP Deep Dive Detail Modal
+        async function openCppTenderDetail(tenderId) {
+            try {
+                const resp = await fetch(`/api/cpp/tender_detail?tender_id=${encodeURIComponent(tenderId)}`);
+                const res = await resp.json();
+                if (!res.success || !res.tender) {
+                    showToast(res.error || "Tender details not found");
+                    return;
+                }
+
+                const t = res.tender;
+                currentViewingCppTender = t;
+
+                document.getElementById('cppDetailModalTitle').textContent = t.tender_id || t.canonical_key || 'Tender Details';
+                document.getElementById('cppDetailModalRef').textContent = `Ref: ${t.tender_ref_no || 'NA'} | ${t.state_district || 'Central Pan-India'}`;
+                
+                const slBtn = document.getElementById('cppDetailModalShortlistBtn');
+                if (slBtn) {
+                    slBtn.textContent = t.is_shortlisted ? '★ Shortlisted' : '☆ Shortlist';
+                    slBtn.style.background = t.is_shortlisted ? '#FEFCBF' : '#ffffff';
+                }
+
+                // Render detail body sections
+                const body = document.getElementById('cppDetailModalBody');
+                body.innerHTML = `
+                    <!-- 1. Organisation Chain Hierarchy -->
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Organisation Chain (विभाग श्रृंखला):</div>
+                        <div style="font-size: 0.88rem; font-weight: 700; color: #1e3a8a; margin-top: 3px;">
+                            ${escapeHtml(t.organisation_chain || t.department || 'Central Government')}
+                        </div>
+                    </div>
+
+                    <!-- 2. Work Item & Value Card -->
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+                            <div style="font-size: 0.76rem; font-weight: 700; color: #64748b; text-transform: uppercase;">Work Description (कार्य विवरण):</div>
+                            <div style="font-size: 0.92rem; font-weight: 600; color: #0f172a; margin-top: 4px; line-height: 1.4;">
+                                ${escapeHtml(t.work_description || t.title || 'Work details not specified')}
+                            </div>
+                            <div style="margin-top: 10px; display: flex; gap: 8px; flex-wrap: wrap;">
+                                <span class="district-badge" style="background: #f1f5f9; color: #334155;">Contract Type: ${escapeHtml(t.contract_type || 'Tender')}</span>
+                                <span class="district-badge" style="background: #e0f2fe; color: #0369a1;">Slab: ${escapeHtml(t.budget_slab || '')}</span>
+                            </div>
+                        </div>
+
+                        <div style="background: #f0fdf4; border: 1.5px solid #bbf7d0; border-radius: 8px; padding: 14px; display: flex; flex-direction: column; justify-content: center;">
+                            <div style="font-size: 0.76rem; font-weight: 700; color: #166534; text-transform: uppercase;">Tender Value (₹):</div>
+                            <div style="font-size: 1.4rem; font-weight: 800; color: #15803d; margin: 4px 0;">
+                                ${escapeHtml(t.tender_value_formatted || `₹ ${(t.tender_value_inr || 0).toLocaleString()}`)}
+                            </div>
+                            <div style="font-size: 0.76rem; color: #166534;">Estimated Project Cost</div>
+                        </div>
+                    </div>
+
+                    <!-- 3. Fee & EMD Details -->
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 16px;">
+                        <div style="background: #fffbeb; border: 1.5px solid #fef3c7; border-radius: 8px; padding: 12px 14px;">
+                            <div style="font-size: 0.8rem; font-weight: 800; color: #92400e; margin-bottom: 6px;">💵 Tender Fee Details:</div>
+                            <div style="font-size: 0.84rem; color: #78350f; line-height: 1.45;">
+                                <div><strong>Fee Amount:</strong> ${escapeHtml(t.tender_fee_formatted || `₹ ${(t.tender_fee_inr || 0).toLocaleString()}`)}</div>
+                                <div><strong>Payable To:</strong> ${escapeHtml(t.fee_payable_to || 'Nil')}</div>
+                                <div><strong>Payable At:</strong> ${escapeHtml(t.fee_payable_at || 'Nil')}</div>
+                                <div><strong>Exemption Allowed:</strong> ${escapeHtml(t.fee_exemption_allowed || 'No')}</div>
+                            </div>
+                        </div>
+
+                        <div style="background: #fdf2f8; border: 1.5px solid #fbcfe8; border-radius: 8px; padding: 12px 14px;">
+                            <div style="font-size: 0.8rem; font-weight: 800; color: #9d174d; margin-bottom: 6px;">🛡️ EMD Fee Details:</div>
+                            <div style="font-size: 0.84rem; color: #831843; line-height: 1.45;">
+                                <div><strong>EMD Amount:</strong> ${escapeHtml(t.emd_amount_formatted || `₹ ${(t.emd_amount_inr || 0).toLocaleString()}`)}</div>
+                                <div><strong>Payable To:</strong> ${escapeHtml(t.emd_payable_to || 'Nil')}</div>
+                                <div><strong>Payable At:</strong> ${escapeHtml(t.emd_payable_at || 'Nil')}</div>
+                                <div><strong>EMD Type:</strong> ${escapeHtml(t.emd_fee_type || 'fixed')} | <strong>Exemption:</strong> ${escapeHtml(t.emd_exemption_allowed || 'No')}</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 4. Accepted Payment Instruments Table -->
+                    <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">💳 Accepted Payment Instruments (भुगतान के साधन):</div>
+                        ${renderCppInstrumentsList(t.instruments)}
+                    </div>
+
+                    <!-- 5. Critical Dates Timeline -->
+                    <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div style="font-size: 0.82rem; font-weight: 800; color: #0f172a; margin-bottom: 8px;">📅 Critical Dates Timeline (महत्वपूर्ण तिथियाँ):</div>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; font-size: 0.82rem;">
+                            <div><strong style="color: #64748b;">Published Date:</strong><br>${escapeHtml(t.published_date || 'NA')}</div>
+                            <div><strong style="color: #64748b;">Doc Download End:</strong><br>${escapeHtml(t.doc_download_end_date || t.bid_closing_date || 'NA')}</div>
+                            <div><strong style="color: #dc2626;">Bid Closing Date:</strong><br><span style="color:#dc2626; font-weight:700;">${escapeHtml(t.bid_closing_date || t.bid_submission_end_date || 'NA')}</span></div>
+                            <div><strong style="color: #0369a1;">Bid Opening Date:</strong><br>${escapeHtml(t.bid_opening_date || 'NA')}</div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Tender Documents & Downloads -->
+                    <div style="background: white; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <div style="font-size: 0.82rem; font-weight: 800; color: #0f172a;">📄 Tender Documents (NIT &amp; Attachments):</div>
+                            ${t.zip_download_url ? `
+                                <button type="button" class="btn-top" style="background: #047857; color: white; padding: 4px 10px; font-size: 0.78rem;" onclick="downloadCppDoc('${escapeJsString(t.tender_id || t.canonical_key)}', 'zip', 0)">
+                                    📦 Download as ZIP File
+                                </button>
+                            ` : ''}
+                        </div>
+                        ${renderCppDocumentsTable(t.documents, t.tender_id || t.canonical_key)}
+                    </div>
+
+                    <!-- 7. Share Controls -->
+                    <div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end; padding-top: 6px; border-top: 1px solid #e2e8f0;">
+                        <span style="font-size: 0.8rem; font-weight: 700; color: #64748b;">Share Tender:</span>
+                        <button type="button" class="btn-share btn-whatsapp" onclick="shareCppTenderWhatsApp('${escapeJsString(t.tender_id || t.canonical_key)}')">
+                            📱 WhatsApp
+                        </button>
+                        <button type="button" class="btn-share btn-email" onclick="shareCppTenderEmail('${escapeJsString(t.tender_id || t.canonical_key)}')">
+                            ✉️ Email
+                        </button>
+                        <button type="button" class="btn-share btn-copy" onclick="copyCppTenderSummary('${escapeJsString(t.tender_id || t.canonical_key)}')">
+                            📋 Copy Summary
+                        </button>
+                    </div>
+                `;
+
+                document.getElementById('cppTenderDetailModal').classList.add('active');
+            } catch (e) {
+                showToast("Failed to load details: " + e.message);
+            }
+        }
+
+        function closeCppTenderDetailModal() {
+            document.getElementById('cppTenderDetailModal').classList.remove('active');
+        }
+
+        function toggleCppShortlistFromModal() {
+            if (currentViewingCppTender) {
+                const tid = currentViewingCppTender.tender_id || currentViewingCppTender.canonical_key;
+                toggleCppShortlist(tid);
+                currentViewingCppTender.is_shortlisted = !currentViewingCppTender.is_shortlisted;
+                const slBtn = document.getElementById('cppDetailModalShortlistBtn');
+                if (slBtn) {
+                    slBtn.textContent = currentViewingCppTender.is_shortlisted ? '★ Shortlisted' : '☆ Shortlist';
+                    slBtn.style.background = currentViewingCppTender.is_shortlisted ? '#FEFCBF' : '#ffffff';
+                }
+            }
+        }
+
+        function renderCppInstrumentsList(instruments) {
+            if (!instruments || instruments.length === 0) {
+                return '<div style="font-size: 0.8rem; color: #64748b;">Instruments info not specified in source. (Demand Draft / FDR / Bank Guarantee / RTGS generally accepted)</div>';
+            }
+            return `
+                <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+                    ${instruments.map(i => `
+                        <span class="district-badge" style="background: #f1f5f9; color: #1e293b; border-color: #cbd5e1;">
+                            💳 ${escapeHtml(i.instrument_type || '')}
+                        </span>
+                    `).join('')}
+                </div>
+            `;
+        }
+
+        function renderCppDocumentsTable(documents, tenderId) {
+            if (!documents || documents.length === 0) {
+                return '<div style="font-size: 0.8rem; color: #64748b;">No direct document links captured. (Use portal direct link or ZIP download).</div>';
+            }
+            return `
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                    <thead>
+                        <tr style="background: #f1f5f9; text-align: left;">
+                            <th style="padding: 6px 8px;">Document Name</th>
+                            <th style="padding: 6px 8px;">Description</th>
+                            <th style="padding: 6px 8px;">Size</th>
+                            <th style="padding: 6px 8px; text-align: center;">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${documents.map((d, dIdx) => `
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 6px 8px; font-weight: 600; color: #0f172a;">📄 ${escapeHtml(d.name || 'NIT Document')}</td>
+                                <td style="padding: 6px 8px; color: #475569;">${escapeHtml(d.description || 'NIT')}</td>
+                                <td style="padding: 6px 8px; color: #64748b;">${escapeHtml(d.size_kb ? d.size_kb + ' KB' : '-')}</td>
+                                <td style="padding: 6px 8px; text-align: center;">
+                                    ${d.local_path ? `
+                                        <a href="/api/cpp/downloaded_file?path=${encodeURIComponent(d.local_path)}" target="_blank" class="pill-file pill-file-boq">
+                                            ✅ Downloaded (${escapeHtml(d.name)})
+                                        </a>
+                                    ` : (d.download_url ? `
+                                        <button type="button" class="btn-top" style="padding: 3px 8px; font-size: 0.74rem; background: #0284c7; color: white; border: none;" onclick="downloadCppDoc('${escapeJsString(tenderId)}', 'nit', ${dIdx})">
+                                            ⬇️ Download File
+                                        </button>
+                                    ` : '<span style="color:#94a3b8;">Portal direct</span>')}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        // Download document via backend to downloads_cpp/
+        async function downloadCppDoc(tenderId, docType, docIndex) {
+            showToast("Downloading document to downloads_cpp/ folder...");
+            try {
+                const resp = await fetch('/api/cpp/download_document', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        tender_id: tenderId,
+                        doc_type: docType,
+                        doc_index: docIndex,
+                        session_id: cppActiveSessionId
+                    })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast(`✅ Saved to ${res.local_path}`);
+                    window.open(`/api/cpp/downloaded_file?path=${encodeURIComponent(res.local_path)}`, '_blank');
+                    // Refresh modal
+                    openCppTenderDetail(tenderId);
+                } else {
+                    showToast(res.error || "Download failed");
+                }
+            } catch (e) {
+                showToast("Download error: " + e.message);
+            }
+        }
+
+        // WhatsApp Share for CPPP Tender
+        function shareCppTenderWhatsApp(tenderId) {
+            const t = cppTendersData.find(x => (x.tender_id || x.canonical_key) === tenderId);
+            if (!t) return;
+            const msg = `🏛️ *CENTRAL GOVT TENDER (CPPP)*%0A%0A*Tender ID:* ${t.tender_id}%0A*Ref:* ${t.tender_ref_no || 'NA'}%0A*Work:* ${t.title || t.work_description}%0A*Dept:* ${t.department}%0A*Location:* ${t.state_district || 'Central'}%0A*Value:* ${t.tender_value_formatted || '₹ ' + (t.tender_value_inr||0)}%0A*EMD:* ${t.emd_amount_formatted || 'Nil'}%0A*Closing Date:* ${t.bid_closing_date}%0A%0A_Shared via TDSC Tender Intelligence Platform_`;
+            window.open(`https://api.whatsapp.com/send?text=${msg}`, '_blank');
+        }
+
+        // Email Share for CPPP Tender
+        function shareCppTenderEmail(tenderId) {
+            const t = cppTendersData.find(x => (x.tender_id || x.canonical_key) === tenderId);
+            if (!t) return;
+            const subject = encodeURIComponent(`Central Tender: ${t.tender_id} - ${t.department}`);
+            const body = encodeURIComponent(`Central Public Procurement Portal Tender Details:
+
+Tender ID: ${t.tender_id}
+Reference: ${t.tender_ref_no || 'NA'}
+Work Title: ${t.title || t.work_description}
+Department: ${t.department}
+State / Location: ${t.state_district || 'Central'}
+Estimated Value: ${t.tender_value_formatted || '₹ ' + (t.tender_value_inr||0)}
+EMD Amount: ${t.emd_amount_formatted || 'Nil'}
+Closing Date: ${t.bid_closing_date}
+
+Shared via TDSC Tender Intelligence Platform`);
+            window.open(`mailto:?subject=${subject}&body=${body}`, '_blank');
+        }
+
+        // Copy Text Summary for CPPP Tender
+        function copyCppTenderSummary(tenderId) {
+            const t = cppTendersData.find(x => (x.tender_id || x.canonical_key) === tenderId);
+            if (!t) return;
+            const summary = `Central Govt Tender (eprocure.gov.in)
+Tender ID: ${t.tender_id}
+Ref: ${t.tender_ref_no || 'NA'}
+Work: ${t.title || t.work_description}
+Dept: ${t.department}
+Location: ${t.state_district || 'Central'}
+Value: ${t.tender_value_formatted || '₹ ' + (t.tender_value_inr||0)}
+EMD: ${t.emd_amount_formatted || 'Nil'}
+Closing Date: ${t.bid_closing_date}`;
+            navigator.clipboard.writeText(summary).then(() => {
+                showToast("📋 Tender summary copied to clipboard!");
+            }).catch(() => {
+                showToast("Could not copy summary");
+            });
+        }
+
+
         function switchAppView(viewId) {
             document.querySelectorAll('.app-view').forEach(v => v.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));

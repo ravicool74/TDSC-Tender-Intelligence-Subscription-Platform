@@ -50,6 +50,12 @@ from sync_excel_to_web import extract_excel_data
 from universal_scraper import scrape_any_url
 from action_details_manager import get_action_details, load_cache, sync_single_tender_live
 from build_unified_dataset import build_comprehensive_unified_dataset
+from cpp_tender_manager import (
+    load_cpp_tenders_store, save_cpp_tenders_batch, toggle_cpp_shortlist,
+    init_cpp_session, submit_cpp_search_and_crawl, crawl_next_cpp_page,
+    import_cpp_raw_html, download_cpp_document, generate_cpp_excel_workbook,
+    CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
+)
 
 PORT = int(os.environ.get("PORT", 8000))
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
@@ -719,6 +725,197 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                         data = json.load(f)
                 except: pass
             self.send_json(data)
+            return
+
+        # 14. Dedicated CPP Tenders Listing & Filtering API
+        elif path == '/api/cpp/tenders':
+            try:
+                store = load_cpp_tenders_store()
+                all_tenders = store.get("tenders", [])
+                
+                # Extract query filters
+                q_search = query.get('search', [''])[0].strip().lower()
+                q_slab = query.get('slab', [''])[0].strip()
+                q_state = query.get('state', [''])[0].strip().lower()
+                q_dept = query.get('dept', [''])[0].strip().lower()
+                q_shortlist = query.get('shortlist_only', [''])[0].strip().lower() in ['true', '1', 'yes']
+                q_sort = query.get('sort', ['date_desc'])[0].strip()
+                try:
+                    page = max(1, int(query.get('page', ['1'])[0]))
+                except ValueError:
+                    page = 1
+                try:
+                    limit = max(1, min(200, int(query.get('limit', ['50'])[0])))
+                except ValueError:
+                    limit = 50
+
+                filtered = []
+                total_val_sum = 0.0
+                closing_soon_cnt = 0
+                now_dt = datetime.now()
+
+                for t in all_tenders:
+                    # Calculations
+                    val = float(t.get('tender_value_inr') or 0.0)
+                    total_val_sum += val
+                    if t.get('is_shortlisted'):
+                        pass
+
+                    # Filter: search keyword
+                    if q_search:
+                        text_corpus = f"{t.get('tender_id','')} {t.get('tender_ref_no','')} {t.get('title','')} {t.get('organisation_chain','')} {t.get('department','')} {t.get('state_district','')}".lower()
+                        if q_search not in text_corpus:
+                            continue
+
+                    # Filter: slab
+                    if q_slab and q_slab.lower() != 'all':
+                        if str(t.get('budget_slab', '')).lower() != q_slab.lower():
+                            continue
+
+                    # Filter: state / location
+                    if q_state:
+                        if q_state not in str(t.get('state_district', '')).lower():
+                            continue
+
+                    # Filter: department
+                    if q_dept:
+                        if q_dept not in str(t.get('department', '')).lower():
+                            continue
+
+                    # Filter: shortlist only
+                    if q_shortlist and not t.get('is_shortlisted'):
+                        continue
+
+                    filtered.append(t)
+
+                # Sorting
+                if q_sort == 'value_desc':
+                    filtered.sort(key=lambda x: float(x.get('tender_value_inr') or 0.0), reverse=True)
+                elif q_sort == 'value_asc':
+                    filtered.sort(key=lambda x: float(x.get('tender_value_inr') or 0.0))
+                elif q_sort == 'date_asc':
+                    filtered.sort(key=lambda x: str(x.get('bid_closing_date') or ''))
+                else: # date_desc
+                    filtered.sort(key=lambda x: str(x.get('bid_closing_date') or ''), reverse=True)
+
+                # Pagination
+                start_idx = (page - 1) * limit
+                end_idx = start_idx + limit
+                paged = filtered[start_idx:end_idx]
+
+                # Stats calculation
+                depts = set(t.get('department', '') for t in all_tenders if t.get('department'))
+                shortlisted_cnt = sum(1 for t in all_tenders if t.get('is_shortlisted'))
+
+                self.send_json({
+                    "success": True,
+                    "total": len(filtered),
+                    "total_unfiltered": len(all_tenders),
+                    "page": page,
+                    "limit": limit,
+                    "tenders": paged,
+                    "stats": {
+                        "total_count": len(all_tenders),
+                        "total_value_cr": round(total_val_sum / 10000000.0, 2),
+                        "shortlisted_count": shortlisted_cnt,
+                        "unique_departments": len(depts)
+                    }
+                })
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        # 15. Dedicated CPP Tender Deep-Dive Detail API
+        elif path == '/api/cpp/tender_detail':
+            tender_id = query.get('tender_id', [query.get('id', [''])])[0].strip().lower()
+            if not tender_id:
+                self.send_json({"error": "Missing tender_id parameter"}, status=400)
+                return
+
+            store = load_cpp_tenders_store()
+            target = None
+            for t in store.get("tenders", []):
+                if str(t.get("tender_id", "")).strip().lower() == tender_id or str(t.get("canonical_key", "")).strip().lower() == tender_id:
+                    target = t
+                    break
+
+            if target:
+                self.send_json({"success": True, "tender": target})
+            else:
+                self.send_json({"success": False, "error": f"Tender '{tender_id}' not found in CPP database"}, status=404)
+            return
+
+        # 16. Dedicated CPP Analytics Summary API
+        elif path == '/api/cpp/summary':
+            store = load_cpp_tenders_store()
+            all_tenders = store.get("tenders", [])
+            total_val = sum(float(t.get('tender_value_inr') or 0.0) for t in all_tenders)
+            depts = sorted(list(set(t.get('department', '') for t in all_tenders if t.get('department'))))
+            locations = sorted(list(set(t.get('state_district', '') for t in all_tenders if t.get('state_district'))))
+            sl_count = sum(1 for t in all_tenders if t.get('is_shortlisted'))
+            
+            # Value slabs distribution
+            slabs = {"0to25L": 0, "25Lto50L": 0, "50Lto2Cr": 0, "2Crto5Cr": 0, "Above5Cr": 0}
+            for t in all_tenders:
+                slab = t.get('budget_slab', '0to25L')
+                if slab in slabs:
+                    slabs[slab] += 1
+
+            self.send_json({
+                "success": True,
+                "total_tenders": len(all_tenders),
+                "total_value_cr": round(total_val / 10000000.0, 2),
+                "shortlisted_count": sl_count,
+                "departments": depts,
+                "locations": locations,
+                "slabs": slabs,
+                "updated_at": store.get("updated_at")
+            })
+            return
+
+        # 17. Dedicated CPP Excel Workbook Export
+        elif path == '/api/cpp/export_xlsx':
+            try:
+                if not os.path.exists(CPP_EXCEL_PATH):
+                    generate_cpp_excel_workbook()
+
+                with open(CPP_EXCEL_PATH, 'rb') as f:
+                    content = f.read()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                self.send_header('Content-Disposition', 'attachment; filename="CPP_Central_Gov_Tenders_Comprehensive.xlsx"')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
+            return
+
+        # 18. Dedicated CPP Downloaded File Server (PDF / ZIP)
+        elif path == '/api/cpp/downloaded_file':
+            rel_file = query.get('path', [''])[0].strip().replace('\\', '/')
+            if not rel_file or not rel_file.startswith('downloads_cpp/'):
+                self.send_json({"error": "Invalid or unauthorized file path"}, status=403)
+                return
+
+            full_path = os.path.normpath(os.path.join(DIRECTORY, rel_file))
+            if not full_path.startswith(os.path.abspath(CPP_DOWNLOADS_DIR)) or not os.path.exists(full_path):
+                self.send_json({"error": "File not found"}, status=404)
+                return
+
+            try:
+                with open(full_path, 'rb') as f:
+                    data = f.read()
+                mime = 'application/pdf' if full_path.endswith('.pdf') else 'application/zip' if full_path.endswith('.zip') else 'application/octet-stream'
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Disposition', f'attachment; filename="{os.path.basename(full_path)}"')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
             return
 
         super().do_GET()
@@ -1551,6 +1748,91 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             with open(PREFS_FILE, 'w', encoding='utf-8') as f:
                 json.dump(body, f, indent=2, ensure_ascii=False)
             self.send_json({"status": "saved"})
+            return
+
+        # 19. CPP Live Session Start (Manual User CAPTCHA Workflow)
+        elif path == '/api/cpp/session/start':
+            body = self.read_json_body()
+            mode = body.get('mode', 'active_tenders')
+            res = init_cpp_session(mode=mode)
+            self.send_json(res, status=200 if res.get('success') else 500)
+            return
+
+        # 20. CPP User CAPTCHA Submission & Polite Crawler
+        elif path == '/api/cpp/session/submit_captcha':
+            body = self.read_json_body()
+            session_id = body.get('session_id', '')
+            captcha_text = body.get('captcha_text', '')
+            tender_id = body.get('tender_id', '')
+            tender_title = body.get('tender_title', '')
+            max_details = int(body.get('max_details', 15))
+
+            if not session_id or not captcha_text:
+                self.send_json({"success": False, "error": "Please provide session_id and the solved captcha_text."}, status=400)
+                return
+
+            res = submit_cpp_search_and_crawl(
+                session_id=session_id,
+                captcha_text=captcha_text,
+                tender_id=tender_id,
+                tender_title=tender_title,
+                max_detail_fetch=max_details
+            )
+            self.send_json(res, status=200 if res.get('success') or res.get('captcha_error') else 500)
+            return
+
+        # 21. CPP Crawl Next Page via Tapestry Pagination
+        elif path == '/api/cpp/session/next_page':
+            body = self.read_json_body()
+            session_id = body.get('session_id', '')
+            page_url = body.get('page_url', '')
+
+            if not session_id or not page_url:
+                self.send_json({"success": False, "error": "Missing session_id or page_url"}, status=400)
+                return
+
+            res = crawl_next_cpp_page(session_id, page_url)
+            self.send_json(res, status=200 if res.get('success') else 500)
+            return
+
+        # 22. CPP Raw HTML / Offline Search Results & Details Importer
+        elif path == '/api/cpp/import_html':
+            body = self.read_json_body()
+            html_content = body.get('html_content', '')
+            if not html_content.strip():
+                self.send_json({"success": False, "error": "HTML content cannot be empty"}, status=400)
+                return
+
+            res = import_cpp_raw_html(html_content)
+            self.send_json({"success": True, "import_result": res})
+            return
+
+        # 23. CPP Shortlist Toggle
+        elif path == '/api/cpp/toggle_shortlist':
+            body = self.read_json_body()
+            tender_id = body.get('tender_id', '')
+            if not tender_id:
+                self.send_json({"success": False, "error": "Missing tender_id"}, status=400)
+                return
+
+            res = toggle_cpp_shortlist(tender_id)
+            self.send_json(res, status=200 if res.get('success') else 404)
+            return
+
+        # 24. CPP Document Downloader (NIT PDF / All-Documents ZIP)
+        elif path == '/api/cpp/download_document':
+            body = self.read_json_body()
+            tender_id = body.get('tender_id', '')
+            doc_type = body.get('doc_type', 'nit')
+            doc_index = int(body.get('doc_index', 0))
+            session_id = body.get('session_id', '')
+
+            if not tender_id:
+                self.send_json({"success": False, "error": "Missing tender_id"}, status=400)
+                return
+
+            res = download_cpp_document(tender_id, doc_type=doc_type, doc_index=doc_index, session_id=session_id)
+            self.send_json(res, status=200 if res.get('success') else 500)
             return
 
         else:
