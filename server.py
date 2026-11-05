@@ -180,6 +180,9 @@ def match_contractors_for_tender(tender: dict, contractors: list):
     return results
 
 class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
+    def address_string(self):
+        # Prevent slow reverse DNS lookup on Windows
+        return str(self.client_address[0])
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=DIRECTORY, **kwargs)
 
@@ -220,6 +223,7 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
         payload = json.dumps(data, ensure_ascii=False).encode('utf-8')
         self.send_response(status)
         self.send_header('Content-Type', 'application/json; charset=utf-8')
+        self.send_header('Content-Length', str(len(payload)))
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE, PUT')
@@ -1858,21 +1862,49 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
         super().end_headers()
 
 def open_browser():
-    time.sleep(1.2)
+    time.sleep(1.0)
     try:
-        webbrowser.open(f"http://localhost:{PORT}")
+        webbrowser.open(f"http://127.0.0.1:{PORT}")
     except Exception:
         pass
 
+class ThreadedHTTPServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+    def server_bind(self):
+        # Support dual-stack (both IPv4 and IPv6) so localhost and 127.0.0.1 both connect with 0 latency
+        try:
+            self.socket = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
+            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
+            self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            self.socket.bind(self.server_address)
+            self.server_address = self.socket.getsockname()
+        except Exception:
+            super().server_bind()
+
 if __name__ == "__main__":
     os.chdir(DIRECTORY)
+    # Check if another server instance is already running on this port
+    try:
+        check_req = urllib.request.Request(f"http://127.0.0.1:{PORT}/api/auth/me")
+        with urllib.request.urlopen(check_req, timeout=0.8) as check_resp:
+            if check_resp.status == 200:
+                print("=" * 70)
+                print(f" [OK] TDSC Platform is already active on http://127.0.0.1:{PORT}!")
+                print(" Opening browser dashboard directly...")
+                print("=" * 70)
+                webbrowser.open(f"http://127.0.0.1:{PORT}")
+                sys.exit(0)
+    except Exception:
+        pass
+
     # Initialize DB tables and seed data
     init_database()
     ensure_default_admin()
     ensure_default_employee()
 
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", PORT), PaidTenderRequestHandler) as httpd:
+    with ThreadedHTTPServer(("", PORT), PaidTenderRequestHandler) as httpd:
         print("=" * 70)
         print(" TDSC Tender Intelligence & Subscription Platform is LIVE!")
         print(f" Listening on port {PORT} (http://0.0.0.0:{PORT})")
