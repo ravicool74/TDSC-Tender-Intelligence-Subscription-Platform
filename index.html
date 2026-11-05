@@ -1208,6 +1208,159 @@
             </div>
         </section>
 
+
+        <!-- ============================================================== -->
+        <!-- VIEW 6: CENTRAL PUBLIC PROCUREMENT PORTAL (GeM-CPPP भारत सरकार) -->
+        <!-- ============================================================== -->
+        <section id="viewCpp" class="app-view">
+            <!-- CPPP Hero Header -->
+            <div style="background: linear-gradient(135deg, #064e3b, #047857); color: white; border-radius: 10px; padding: 18px 24px; margin-bottom: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.8rem;">🇮🇳</span>
+                        <div>
+                            <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: 0.3px;">Central Public Procurement Portal (GeM-CPPP • भारत सरकार)</h2>
+                            <div style="font-size: 0.84rem; opacity: 0.95; margin-top: 3px;">
+                                Central Government Ministries, CPSEs &amp; Autonomous Bodies &bull; <code>eprocure.gov.in/eprocure/app</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <a href="https://eprocure.gov.in/eprocure/app?page=FrontEndLatestActiveTenders&service=page" target="_blank" style="background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 7px 14px; border-radius: 6px; text-decoration: none; font-size: 0.82rem; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+                        🌐 Official Portal Active Tenders
+                    </a>
+                    <button type="button" class="btn-top" onclick="exportCppExcel()" style="background: #2563eb; color: white; border: none; font-weight: 700; padding: 7px 14px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        📊 Export CPP Excel (.xlsx)
+                    </button>
+                    <button type="button" class="btn-top" onclick="openCppCrawlerModal()" style="background: #f59e0b; color: #78350f; border: none; font-weight: 800; padding: 8px 18px; border-radius: 6px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.92rem;">
+                        ⚡ Start Bharat Sarkar Live Crawler (Captcha &amp; Search)
+                    </button>
+                </div>
+            </div>
+
+            <!-- User-Controlled Active Tenders Launch Banner -->
+            <div style="background: #f0fdf4; border: 2px dashed #10b981; border-radius: 8px; padding: 14px 20px; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="font-size: 2rem;">🛡️</div>
+                    <div>
+                        <div style="font-weight: 800; color: #065f46; font-size: 0.96rem;">
+                            User-Controlled CAPTCHA Engine: Zero Automation &bull; Real Live Govt Captcha
+                        </div>
+                        <div style="font-size: 0.82rem; color: #047857; margin-top: 2px;">
+                            "Active Tenders" (More...) aur "Advanced Search" dono supported hain. Aap Captcha solve karein, system 7-column table aur detail pages (Fee, EMD, Work Details, Dates, Docs) khinch kar alag Excel aur JSON me save karega.
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button type="button" onclick="openCppCrawlerModal()" style="background: #059669; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; font-size: 0.86rem; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                        <span>🔍</span> <span>Open Search &amp; Captcha Page</span>
+                    </button>
+                    <button type="button" onclick="openCppPasteModal()" style="background: #ffffff; color: #065f46; border: 1.5px solid #10b981; padding: 8px 14px; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.86rem;">
+                        📋 Paste Raw HTML
+                    </button>
+                </div>
+            </div>
+
+            <!-- Summary Stats Ribbon -->
+            <div class="stats-ribbon" style="margin-bottom: 18px;">
+                <div class="stat-card green">
+                    <span class="label">Total Central Tenders</span>
+                    <span class="value" id="statCppTotalCount">--</span>
+                    <span class="sub">eprocure.gov.in Records</span>
+                </div>
+                <div class="stat-card gold">
+                    <span class="label">Total Tender Value</span>
+                    <span class="value" id="statCppTotalPAC">₹ 0 Cr</span>
+                    <span class="sub">Cumulative Central Tenders</span>
+                </div>
+                <div class="stat-card purple">
+                    <span class="label">⭐ Shortlisted Tenders</span>
+                    <span class="value" id="statCppShortlistCount">0</span>
+                    <span class="sub">Starred for action</span>
+                </div>
+                <div class="stat-card blue">
+                    <span class="label">Departments Covered</span>
+                    <span class="value" id="statCppDeptCount">--</span>
+                    <span class="sub">Ministries &amp; PSU Chains</span>
+                </div>
+            </div>
+
+            <!-- CPPP Filter Panel Box -->
+            <div class="filter-panel-box" style="margin-bottom: 18px;">
+                <div class="search-row-main" style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 240px; position: relative;">
+                        <input type="text" id="cppSearchInput" class="form-control" placeholder="🔍 Search by Tender ID, Title, Organisation, Ref No, District..." oninput="applyCppFilters()" style="height: 40px; font-size: 0.9rem; padding-left: 12px; border-radius: 6px;">
+                    </div>
+                    <div style="min-width: 170px;">
+                        <select id="cppFilterSlab" class="form-control" onchange="applyCppFilters()" style="height: 40px; font-size: 0.86rem;">
+                            <option value="all">All Value Slabs (सभी बजट)</option>
+                            <option value="0to25L">Below 25 Lakh (₹0 - 25L)</option>
+                            <option value="25Lto50L">25 to 50 Lakh (₹25L - 50L)</option>
+                            <option value="50Lto2Cr">50 Lakh to 2 Crore (₹50L - 2Cr)</option>
+                            <option value="2Crto5Cr">2 Crore to 5 Crore (₹2Cr - 5Cr)</option>
+                            <option value="above5Cr">Above 5 Crore (&gt; ₹5Cr)</option>
+                        </select>
+                    </div>
+                    <div style="min-width: 200px;">
+                        <select id="cppFilterDept" class="form-control" onchange="applyCppFilters()" style="height: 40px; font-size: 0.86rem;">
+                            <option value="all">All Departments (सभी विभाग)</option>
+                        </select>
+                    </div>
+                    <div style="min-width: 170px;">
+                        <select id="cppFilterLocation" class="form-control" onchange="applyCppFilters()" style="height: 40px; font-size: 0.86rem;">
+                            <option value="all">All Locations (सभी राज्य/स्थान)</option>
+                        </select>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px; padding: 0 8px;">
+                        <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: #854d0e; cursor: pointer; white-space: nowrap;">
+                            <input type="checkbox" id="cppShortlistOnly" onchange="applyCppFilters()" style="width: 16px; height: 16px; accent-color: #d97706;">
+                            ⭐ Starred Only
+                        </label>
+                    </div>
+                    <div>
+                        <button type="button" class="btn-top" onclick="loadCppTenders()" style="height: 40px; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 14px; font-weight: 700; cursor: pointer;">
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CPPP Data Table Card -->
+            <div class="table-card" style="box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06); border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;">
+                <div style="background: #f8fafc; border-bottom: 1px solid #e2e8f0; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <div style="font-weight: 800; color: #1e293b; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <span>📋</span>
+                        <span>Central CPPP Tender Dataset (eprocure.gov.in)</span>
+                        <span style="font-size: 0.76rem; background: #ecfdf5; color: #065f46; border: 1px solid #a7f3d0; padding: 2px 8px; border-radius: 12px; font-weight: 700;">Zero Bihar Collision</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748b;">
+                        Click <strong>🔍 Details</strong> to view Org Chain, Payment Instruments, Fees, Timeline &amp; Documents
+                    </div>
+                </div>
+                <div class="table-container" style="overflow-x: auto;">
+                    <table class="tender-table" style="width: 100%; border-collapse: collapse; font-size: 0.86rem;">
+                        <thead>
+                            <tr style="background: #064e3b; color: white;">
+                                <th style="width: 45px; text-align: center;">S.No</th>
+                                <th style="width: 170px;">Tender ID &amp; Ref No</th>
+                                <th>Title &amp; Organisation Chain</th>
+                                <th style="width: 140px;">State / Location</th>
+                                <th style="width: 130px; text-align: right;">Tender Value (₹)</th>
+                                <th style="width: 110px; text-align: right;">EMD (₹)</th>
+                                <th style="width: 130px; text-align: center;">Closing Date</th>
+                                <th style="width: 50px; text-align: center;">Shortlist</th>
+                                <th style="width: 90px; text-align: center;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cppTenderTableBody">
+                            <!-- Populated dynamically via renderCppTenders() -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
     </main>
 
 
@@ -2314,6 +2467,10 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ mode: mode })
                 });
+                if (!resp.ok) {
+                    loading.innerHTML = `<span style="color:#b91c1c; font-weight:700;">⚠️ Server connection error (HTTP ${resp.status}). Kripya apne computer par 'start_dashboard.bat' chalayein.</span>`;
+                    return;
+                }
                 const res = await resp.json();
                 if (res.success && res.captcha_image) {
                     cppActiveSessionId = res.session_id;
@@ -2369,6 +2526,13 @@
                         max_details: 15
                     })
                 });
+                if (!resp.ok) {
+                    alert("Crawl request failed: HTTP " + resp.status + ". Server console check karein.");
+                    if (btn) btn.disabled = false;
+                    if (spinner) spinner.style.display = 'none';
+                    if (btnText) btnText.textContent = "Search";
+                    return;
+                }
                 const res = await resp.json();
 
                 if (!res.success && res.captcha_error) {
@@ -2746,6 +2910,9 @@ Shared via TDSC Tender Intelligence Platform`);
         // Copy Text Summary for CPPP Tender
         function downloadCppExcel() {
             window.location.href = `${getCppApiBase()}/api/cpp/export_xlsx`;
+        }
+        function exportCppExcel() {
+            downloadCppExcel();
         }
 
         function copyCppTenderSummary(tenderId) {
