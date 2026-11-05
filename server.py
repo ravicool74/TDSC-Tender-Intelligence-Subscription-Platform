@@ -1765,7 +1765,9 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             captcha_text = body.get('captcha_text', '')
             tender_id = body.get('tender_id', '')
             tender_title = body.get('tender_title', '')
-            max_details = int(body.get('max_details', 15))
+            max_details = int(body.get('max_details', 50))
+            max_pages = int(body.get('max_pages', 50))
+            crawl_all_pages = bool(body.get('crawl_all_pages', True))
 
             if not session_id or not captcha_text:
                 self.send_json({"success": False, "error": "Please provide session_id and the solved captcha_text."}, status=200)
@@ -1776,7 +1778,9 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 captcha_text=captcha_text,
                 tender_id=tender_id,
                 tender_title=tender_title,
-                max_detail_fetch=max_details
+                max_detail_fetch=max_details,
+                max_pages=max_pages,
+                crawl_all_pages=crawl_all_pages
             )
             self.send_json(res, status=200)
             return

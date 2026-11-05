@@ -470,20 +470,26 @@ def parse_cpp_search_results_page(html_content: str, base_url: str = "https://ep
     pagination = {
         "current_page": 1,
         "available_pages": [],
-        "next_page_url": ""
+        "next_page_url": "",
+        "last_page_url": ""
     }
     
-    # Tapestry pagination links: sp=AFrontEndAdvancedSearchResult%2Ctable&sp=2 etc.
-    page_links = soup.find_all('a', href=re.compile(r'TablePages\.linkPage|page=FrontEndAdvancedSearchResult'))
+    # Tapestry pagination links: TablePages, linkPage, linkNext, linkLast, sp=...table
+    page_links = soup.find_all('a', href=re.compile(r'TablePages|linkPage|linkNext|linkLast|sp=[A-Za-z0-9%]+table', re.I))
     for pl in page_links:
         href = pl.get('href', '')
         txt = clean_text(pl.get_text())
         full_url = urllib.parse.urljoin(base_url, href)
         if txt.isdigit():
-            pagination["available_pages"].append({"page": int(txt), "url": full_url})
-        elif any(k in txt.lower() for k in ['next', '>', '>>']):
+            p_num = int(txt)
+            if not any(p["page"] == p_num for p in pagination["available_pages"]):
+                pagination["available_pages"].append({"page": p_num, "url": full_url})
+        
+        if 'linkNext' in href or any(k in txt.lower() for k in ['next', '>']):
             if not pagination["next_page_url"]:
                 pagination["next_page_url"] = full_url
+        if 'linkLast' in href or any(k in txt.lower() for k in ['last', '>>']):
+            pagination["last_page_url"] = full_url
 
     return {"tenders": results, "pagination": pagination}
 
@@ -839,7 +845,15 @@ def init_cpp_session(mode: str = "active_tenders") -> dict:
     except Exception as e:
         return {"success": False, "error": f"Failed to connect to eprocure.gov.in: {str(e)}"}
 
-def submit_cpp_search_and_crawl(session_id: str, captcha_text: str, tender_id: str = "", tender_title: str = "", max_detail_fetch: int = 15) -> dict:
+def submit_cpp_search_and_crawl(
+    session_id: str,
+    captcha_text: str,
+    tender_id: str = "",
+    tender_title: str = "",
+    max_detail_fetch: int = 50,
+    max_pages: int = 50,
+    crawl_all_pages: bool = True
+) -> dict:
     """
     Submits user's manually entered CAPTCHA to eprocure.gov.in.
     If CAPTCHA is invalid, returns new CAPTCHA for retry.
@@ -908,38 +922,89 @@ def submit_cpp_search_and_crawl(session_id: str, captcha_text: str, tender_id: s
                     "captcha_image": new_captcha or session.get("captcha_image")
                 }
 
-            # Parse search results
+            # Parse search results for Page 1
             parsed_res = parse_cpp_search_results_page(html, base_url='https://eprocure.gov.in/eprocure/app')
             tenders = parsed_res.get("tenders", [])
             pagination = parsed_res.get("pagination", {})
 
-            # Deep-dive each tender detail if URL present
             existing_keys = get_existing_canonical_keys()
             processed_tenders = []
             duplicates_skipped = 0
+            visited_page_urls = set()
+            pages_crawled = 1
 
-            for t in tenders:
-                canon = t.get("canonical_key", "")
-                tid = t.get("tender_id", "")
-                if (tid and tid.lower() in existing_keys) or (canon and canon.lower() in existing_keys):
-                    duplicates_skipped += 1
-                    continue
+            def process_tender_list(t_list, limit_details=50):
+                nonlocal duplicates_skipped
+                for t in t_list:
+                    canon = str(t.get("canonical_key", "") or "").lower()
+                    tid = str(t.get("tender_id", "") or "").lower()
+                    if (tid and tid in existing_keys) or (canon and canon in existing_keys):
+                        duplicates_skipped += 1
+                        continue
 
-                detail_url = t.get("detail_url")
-                if detail_url and len(processed_tenders) < max_detail_fetch:
-                    try:
-                        time.sleep(1.2)  # Polite pacing delay
-                        d_req = urllib.request.Request(detail_url, headers={'User-Agent': headers['User-Agent'], 'Cookie': cookie})
-                        with urllib.request.urlopen(d_req, context=ctx, timeout=20) as d_resp:
-                            d_html = d_resp.read().decode('utf-8', errors='ignore')
-                            details = parse_cpp_tender_detail_page(d_html, base_url='https://eprocure.gov.in/eprocure/app')
-                            
-                            # Merge details
-                            t.update(details)
-                    except Exception as e_det:
-                        print(f"[CPP] Note: Detail page fetch for {tid} skipped: {e_det}")
+                    if tid: existing_keys.add(tid)
+                    if canon: existing_keys.add(canon)
 
-                processed_tenders.append(t)
+                    detail_url = t.get("detail_url")
+                    if detail_url and len(processed_tenders) < limit_details:
+                        try:
+                            time.sleep(1.0)  # Courteous pacing delay
+                            d_req = urllib.request.Request(detail_url, headers={'User-Agent': headers['User-Agent'], 'Cookie': cookie})
+                            with urllib.request.urlopen(d_req, context=ctx, timeout=20) as d_resp:
+                                d_html = d_resp.read().decode('utf-8', errors='ignore')
+                                details = parse_cpp_tender_detail_page(d_html, base_url='https://eprocure.gov.in/eprocure/app')
+                                if details and isinstance(details, dict):
+                                    t.update(details)
+                        except Exception as e_det:
+                            print(f"[CPP] Note: Detail fetch for {tid} skipped: {e_det}")
+
+                    processed_tenders.append(t)
+
+            # Process Page 1
+            process_tender_list(tenders, limit_details=max_detail_fetch)
+
+            # Multi-Page Crawling Loop up to last page
+            target_max_pages = max_pages if crawl_all_pages else 1
+            while pages_crawled < target_max_pages:
+                next_url = pagination.get("next_page_url")
+                if not next_url and pagination.get("available_pages"):
+                    target_p = pages_crawled + 1
+                    for ap in pagination["available_pages"]:
+                        if ap.get("page") == target_p:
+                            next_url = ap.get("url")
+                            break
+
+                if not next_url or next_url in visited_page_urls:
+                    # Reached the last page!
+                    break
+
+                visited_page_urls.add(next_url)
+                try:
+                    time.sleep(1.4)  # Polite pause between pages
+                    p_req = urllib.request.Request(next_url, headers=headers)
+                    with urllib.request.urlopen(p_req, context=ctx, timeout=30) as p_resp:
+                        p_cookies = (p_resp.headers.get_all('Set-Cookie') if hasattr(p_resp.headers, 'get_all') else [p_resp.headers.get('Set-Cookie')]) or []
+                        for pc in p_cookies:
+                            if pc and 'JSESSIONID' in pc:
+                                cookie = pc.split(';')[0].strip()
+                                session["cookie"] = cookie
+                                headers['Cookie'] = cookie
+
+                        p_html = p_resp.read().decode('utf-8', errors='ignore')
+                        p_res = parse_cpp_search_results_page(p_html, base_url='https://eprocure.gov.in/eprocure/app')
+                        p_tenders = p_res.get("tenders", [])
+                        pagination = p_res.get("pagination", {})
+
+                        if not p_tenders:
+                            break
+
+                        pages_crawled += 1
+                        tenders.extend(p_tenders)
+                        process_tender_list(p_tenders, limit_details=max_detail_fetch)
+
+                except Exception as e_page:
+                    print(f"[CPP] Pagination stop at page {pages_crawled}: {e_page}")
+                    break
 
             # Save batch with duplicate rejection
             save_res = save_cpp_tenders_batch(processed_tenders, allow_update=False) or {}
@@ -953,12 +1018,13 @@ def submit_cpp_search_and_crawl(session_id: str, captcha_text: str, tender_id: s
 
             return {
                 "success": True,
+                "pages_crawled": pages_crawled,
                 "tenders_found": len(tenders),
                 "added": added_cnt,
                 "skipped_duplicates": skipped_cnt,
                 "total_in_system": total_cnt,
                 "pagination": pagination or {},
-                "message": f"Successfully imported {added_cnt} new tenders. {skipped_cnt} duplicates skipped."
+                "message": f"Successfully crawled {pages_crawled} page(s) up to the last page! Captured {len(tenders)} tenders (+{added_cnt} new, {skipped_cnt} duplicates skipped)."
             }
 
     except Exception as e:

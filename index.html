@@ -2031,6 +2031,25 @@
                             </div>
                         </div>
 
+                        <!-- Row 3b: Multi-Page Traversal Option -->
+                        <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 14px;">
+                            <label style="font-size: 0.86rem; font-weight: 700; color: #005a9c; text-align: right;">Pages to Crawl 📑</label>
+                            <div style="display: flex; gap: 12px; font-size: 0.84rem; color: #333333; flex-wrap: wrap; align-items: center;">
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #065f46; font-weight: 800; background: #ecfdf5; padding: 4px 10px; border-radius: 4px; border: 1.5px solid #10b981;">
+                                    <input type="radio" name="cppCrawlPages" value="all" checked> All Pages to End (अंतिम पेज तक) 🚀
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppCrawlPages" value="5"> First 5 Pages (~50 Tenders)
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppCrawlPages" value="10"> First 10 Pages (~100 Tenders)
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppCrawlPages" value="1"> Single Page (सिर्फ 1 पेज)
+                                </label>
+                            </div>
+                        </div>
+
                         <!-- Row 4: Enter Captcha & Live Captcha Image -->
                         <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1;">
                             <label style="font-size: 0.86rem; font-weight: 800; color: #b91c1c; text-align: right;">Enter Captcha <span style="color:red;">*</span></label>
@@ -2514,6 +2533,25 @@
             const tenderId = document.getElementById('cppCrawlTenderId')?.value || '';
             const keyword = document.getElementById('cppCrawlKeyword')?.value || '';
 
+            const pagesVal = document.querySelector('input[name="cppCrawlPages"]:checked')?.value || 'all';
+            let maxPages = 50;
+            let crawlAll = true;
+            if (pagesVal === '1') {
+                maxPages = 1;
+                crawlAll = false;
+            } else if (pagesVal === '5') {
+                maxPages = 5;
+                crawlAll = true;
+            } else if (pagesVal === '10') {
+                maxPages = 10;
+                crawlAll = true;
+            } else {
+                maxPages = 50;
+                crawlAll = true;
+            }
+
+            if (btnText) btnText.textContent = crawlAll ? "Crawling ALL Pages to the End (Please wait)..." : "Crawling Page 1 (Please wait)...";
+
             try {
                 const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha`, {
                     method: 'POST',
@@ -2523,7 +2561,9 @@
                         captcha_text: captchaText,
                         tender_id: tenderId,
                         tender_title: keyword,
-                        max_details: 15
+                        max_details: 50,
+                        max_pages: maxPages,
+                        crawl_all_pages: crawlAll
                     })
                 });
                 if (!resp.ok) {
@@ -2549,7 +2589,7 @@
                 } else if (res.success) {
                     // Success!
                     feedbackBox.style.display = 'block';
-                    feedbackMsg.textContent = `✅ Successfully Extracted & Deduplicated!`;
+                    feedbackMsg.textContent = `✅ Successfully Crawled ${res.pages_crawled || 1} Page(s) up to the Last Page!`;
                     feedbackStats.innerHTML = `
                         <span><strong>Found:</strong> ${res.tenders_found}</span>
                         <span><strong>Added (New):</strong> <span style="color:#166534; font-weight:700;">+${res.added}</span></span>
