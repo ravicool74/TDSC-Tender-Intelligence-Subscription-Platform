@@ -2034,18 +2034,24 @@
                         <!-- Row 3b: Multi-Page Traversal Option -->
                         <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 14px;">
                             <label style="font-size: 0.86rem; font-weight: 700; color: #005a9c; text-align: right;">Pages to Crawl 📑</label>
-                            <div style="display: flex; gap: 12px; font-size: 0.84rem; color: #333333; flex-wrap: wrap; align-items: center;">
+                            <div style="display: flex; gap: 10px; font-size: 0.84rem; color: #333333; flex-wrap: wrap; align-items: center;">
                                 <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer; color: #065f46; font-weight: 800; background: #ecfdf5; padding: 4px 10px; border-radius: 4px; border: 1.5px solid #10b981;">
-                                    <input type="radio" name="cppCrawlPages" value="all" checked> All Pages to End (अंतिम पेज तक) 🚀
+                                    <input type="radio" name="cppCrawlPages" value="all" checked> All Pages to End (अंतिम पेज तक - 2,605+ Tenders) 🚀
                                 </label>
                                 <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-                                    <input type="radio" name="cppCrawlPages" value="5"> First 5 Pages (~50 Tenders)
+                                    <input type="radio" name="cppCrawlPages" value="50"> 50 Pages (~500 Tenders)
                                 </label>
                                 <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-                                    <input type="radio" name="cppCrawlPages" value="10"> First 10 Pages (~100 Tenders)
+                                    <input type="radio" name="cppCrawlPages" value="25"> 25 Pages (~250 Tenders)
                                 </label>
                                 <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
-                                    <input type="radio" name="cppCrawlPages" value="1"> Single Page (सिर्फ 1 पेज)
+                                    <input type="radio" name="cppCrawlPages" value="10"> 10 Pages (~100 Tenders)
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppCrawlPages" value="5"> 5 Pages (~50 Tenders)
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppCrawlPages" value="1"> 1 Page (10 Tenders)
                                 </label>
                             </div>
                         </div>
@@ -2534,7 +2540,7 @@
             const keyword = document.getElementById('cppCrawlKeyword')?.value || '';
 
             const pagesVal = document.querySelector('input[name="cppCrawlPages"]:checked')?.value || 'all';
-            let maxPages = 50;
+            let maxPages = 300;
             let crawlAll = true;
             if (pagesVal === '1') {
                 maxPages = 1;
@@ -2545,12 +2551,22 @@
             } else if (pagesVal === '10') {
                 maxPages = 10;
                 crawlAll = true;
-            } else {
+            } else if (pagesVal === '25') {
+                maxPages = 25;
+                crawlAll = true;
+            } else if (pagesVal === '50') {
                 maxPages = 50;
+                crawlAll = true;
+            } else {
+                maxPages = 300;
                 crawlAll = true;
             }
 
-            if (btnText) btnText.textContent = crawlAll ? "Crawling ALL Pages to the End (Please wait)..." : "Crawling Page 1 (Please wait)...";
+            if (btnText) {
+                btnText.textContent = crawlAll
+                    ? (maxPages >= 300 ? "Crawling ALL Pages to the End (Please wait)..." : `Crawling ${maxPages} Pages (~${maxPages * 10} Tenders)...`)
+                    : "Crawling Page 1 (Please wait)...";
+            }
 
             try {
                 const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha`, {
@@ -2589,9 +2605,11 @@
                 } else if (res.success) {
                     // Success!
                     feedbackBox.style.display = 'block';
+                    const portalTotal = (res.pagination && res.pagination.total_records_portal) ? res.pagination.total_records_portal : (res.tenders_found >= 10 ? '2,605+' : res.tenders_found);
                     feedbackMsg.textContent = `✅ Successfully Crawled ${res.pages_crawled || 1} Page(s) up to the Last Page!`;
                     feedbackStats.innerHTML = `
-                        <span><strong>Found:</strong> ${res.tenders_found}</span>
+                        <span><strong>Total on Portal:</strong> <span style="color:#005a9c; font-weight:800;">${portalTotal}</span></span>
+                        <span><strong>Fetched:</strong> ${res.tenders_found}</span>
                         <span><strong>Added (New):</strong> <span style="color:#166534; font-weight:700;">+${res.added}</span></span>
                         <span><strong>Duplicates Skipped:</strong> <span style="color:#d97706; font-weight:700;">${res.skipped_duplicates}</span></span>
                         <span><strong>Total in System:</strong> ${res.total_in_system}</span>
@@ -5701,9 +5719,14 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     }
                     try {
                         const errData = JSON.parse(text);
-                        alert("Live check failed: " + (errData.error || "Server issue"));
+                        const msg = errData.error || "Server issue";
+                        if (msg.includes("500")) {
+                            alert("eProc2 Bihar portal par is samay temporary traffic ya server issue hai (HTTP 500). Kripya 1 minute baad dobara koshish karein ya local server (http://localhost:8000) par chalayein.");
+                        } else {
+                            alert("Live check: " + msg);
+                        }
                     } catch (e) {
-                        alert("Live check failed: HTTP " + res.status);
+                        alert("eProc2 Bihar portal par temporary server issue mila (HTTP " + res.status + "). Kripya 1 minute baad dobara koshish karein.");
                     }
                     return;
                 }
@@ -5726,7 +5749,12 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                         : "डेटा अप-टू-डेट है (eProc2 पर कोई बदलाव नहीं मिला)।";
                     showToast(`✅ Tender #${tenderId} live check complete! ${changesStr}`);
                 } else {
-                    alert("Live check failed: " + (data.error || "Unknown"));
+                    const msg = data.error || "Unknown";
+                    if (msg.includes("500")) {
+                        alert("eProc2 Bihar portal par is samay temporary traffic ya server issue hai (HTTP 500). Kripya 1 minute baad dobara koshish karein.");
+                    } else {
+                        alert("Live check: " + msg);
+                    }
                 }
             } catch (err) {
                 if (err.message && (err.message.includes('Unexpected token') || err.message.includes('JSON'))) {

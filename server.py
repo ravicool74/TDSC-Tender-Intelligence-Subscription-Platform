@@ -54,7 +54,7 @@ from cpp_tender_manager import (
     load_cpp_tenders_store, save_cpp_tenders_batch, toggle_cpp_shortlist,
     init_cpp_session, submit_cpp_search_and_crawl, crawl_next_cpp_page,
     import_cpp_raw_html, download_cpp_document, generate_cpp_excel_workbook,
-    CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
+    enrich_cpp_tender_detail, CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
 )
 
 PORT = int(os.environ.get("PORT", 8000))
@@ -840,6 +840,16 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                     break
 
             if target:
+                # Lazy deep-dive enrichment if details not yet fetched
+                if target.get("detail_url") and not target.get("instruments") and not target.get("documents"):
+                    try:
+                        enriched = enrich_cpp_tender_detail(target)
+                        if enriched and isinstance(enriched, dict):
+                            target.update(enriched)
+                            save_cpp_tenders_batch([target], allow_update=True)
+                    except Exception as e_enr:
+                        print(f"[CPP] Lazy detail enrichment note: {e_enr}")
+
                 self.send_json({"success": True, "tender": target})
             else:
                 self.send_json({"success": False, "error": f"Tender '{tender_id}' not found in CPP database"}, status=404)

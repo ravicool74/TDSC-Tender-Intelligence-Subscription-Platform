@@ -466,29 +466,46 @@ def parse_cpp_search_results_page(html_content: str, base_url: str = "https://ep
         }
         results.append(item)
 
-    # Extract pagination links
+    # Extract pagination links and total portal record count
     pagination = {
         "current_page": 1,
         "available_pages": [],
         "next_page_url": "",
-        "last_page_url": ""
+        "last_page_url": "",
+        "total_records_portal": 0
     }
     
-    # Tapestry pagination links: TablePages, linkPage, linkNext, linkLast, sp=...table
-    page_links = soup.find_all('a', href=re.compile(r'TablePages|linkPage|linkNext|linkLast|sp=[A-Za-z0-9%]+table', re.I))
+    # Extract total records text if present (e.g. "Total records: 2605")
+    m_tot = re.search(r'Total records\s*[:\-]?\s*(\d+)', soup.get_text(), re.I)
+    if m_tot:
+        pagination["total_records_portal"] = int(m_tot.group(1))
+
+    # Match all Tapestry and eprocure pagination links (loadNext, linkNext, TablePages, sp=...table, etc.)
+    page_links = soup.find_all('a')
     for pl in page_links:
         href = pl.get('href', '')
         txt = clean_text(pl.get_text())
+        if not href or href == '#' or href.startswith('javascript:'):
+            continue
         full_url = urllib.parse.urljoin(base_url, href)
+        txt_l = txt.lower()
+        href_l = href.lower()
+        
+        # Numeric page link
         if txt.isdigit():
             p_num = int(txt)
             if not any(p["page"] == p_num for p in pagination["available_pages"]):
                 pagination["available_pages"].append({"page": p_num, "url": full_url})
         
-        if 'linkNext' in href or any(k in txt.lower() for k in ['next', '>']):
+        # Next Page link: loadNext, linkNext, or text "Next >" / ">"
+        is_next = any(k in href_l or k in txt_l or k in pl.get('title', '').lower() or k in pl.get('id', '').lower() for k in ['loadnext', 'linknext', 'next >', 'next'])
+        is_prev = 'previous' in txt_l or 'loadprevious' in href_l or 'prev' in href_l
+        if is_next and not is_prev:
             if not pagination["next_page_url"]:
                 pagination["next_page_url"] = full_url
-        if 'linkLast' in href or any(k in txt.lower() for k in ['last', '>>']):
+
+        # Last Page link: loadLast, linkLast, or text "Last >>" / ">>"
+        if 'loadlast' in href_l or 'linklast' in href_l or 'last >>' in txt_l or txt_l == 'last' or txt_l == '>>':
             pagination["last_page_url"] = full_url
 
     return {"tenders": results, "pagination": pagination}
@@ -965,6 +982,8 @@ def submit_cpp_search_and_crawl(
 
             # Multi-Page Crawling Loop up to last page
             target_max_pages = max_pages if crawl_all_pages else 1
+            last_page_tender_ids = {str(t.get("tender_id", "") or t.get("canonical_key", "")).lower() for t in tenders}
+
             while pages_crawled < target_max_pages:
                 next_url = pagination.get("next_page_url")
                 if not next_url and pagination.get("available_pages"):
@@ -974,14 +993,19 @@ def submit_cpp_search_and_crawl(
                             next_url = ap.get("url")
                             break
 
-                if not next_url or next_url in visited_page_urls:
-                    # Reached the last page!
+                if not next_url:
+                    # No more next page link found -> Reached last page!
                     break
 
-                visited_page_urls.add(next_url)
                 try:
-                    time.sleep(1.4)  # Polite pause between pages
-                    p_req = urllib.request.Request(next_url, headers=headers)
+                    time.sleep(1.2)  # Courteous pause between pages
+                    p_headers = {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+                        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+                        'Cookie': cookie,
+                        'Referer': session.get("target_url", "https://eprocure.gov.in/eprocure/app")
+                    }
+                    p_req = urllib.request.Request(next_url, headers=p_headers)
                     with urllib.request.urlopen(p_req, context=ctx, timeout=30) as p_resp:
                         p_cookies = (p_resp.headers.get_all('Set-Cookie') if hasattr(p_resp.headers, 'get_all') else [p_resp.headers.get('Set-Cookie')]) or []
                         for pc in p_cookies:
@@ -989,6 +1013,7 @@ def submit_cpp_search_and_crawl(
                                 cookie = pc.split(';')[0].strip()
                                 session["cookie"] = cookie
                                 headers['Cookie'] = cookie
+                                p_headers['Cookie'] = cookie
 
                         p_html = p_resp.read().decode('utf-8', errors='ignore')
                         p_res = parse_cpp_search_results_page(p_html, base_url='https://eprocure.gov.in/eprocure/app')
@@ -997,6 +1022,13 @@ def submit_cpp_search_and_crawl(
 
                         if not p_tenders:
                             break
+
+                        # Check if this page returned the exact same tenders as previous page (loop detection)
+                        current_page_ids = {str(t.get("tender_id", "") or t.get("canonical_key", "")).lower() for t in p_tenders}
+                        if current_page_ids and current_page_ids == last_page_tender_ids:
+                            print(f"[CPP] Identical page detected at page {pages_crawled + 1}, reached last page.")
+                            break
+                        last_page_tender_ids = current_page_ids
 
                         pages_crawled += 1
                         tenders.extend(p_tenders)
@@ -1048,6 +1080,11 @@ def crawl_next_cpp_page(session_id: str, page_url: str) -> dict:
         time.sleep(1.5)  # Courteous pacing
         req = urllib.request.Request(page_url, headers=headers)
         with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
+            new_cookies = (resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]) or []
+            for c in new_cookies:
+                if c and 'JSESSIONID' in c:
+                    cookie = c.split(';')[0].strip()
+                    session["cookie"] = cookie
             html = resp.read().decode('utf-8', errors='ignore')
             parsed_res = parse_cpp_search_results_page(html, base_url='https://eprocure.gov.in/eprocure/app')
             tenders = parsed_res.get("tenders", [])
@@ -1389,3 +1426,37 @@ def generate_cpp_excel_workbook(tenders: list = None) -> str:
 # Self-test block
 if __name__ == "__main__":
     print("[CPP Manager] Module loaded successfully.")
+
+
+def enrich_cpp_tender_detail(tender: dict) -> dict:
+    """
+    Given a tender dictionary with 'detail_url', fetches the FrontEndTenderDetails page
+    and parses:
+    - Organisation Chain, Tender Reference Number, Tender ID
+    - Payment Instruments table (S.No, Instrument Type)
+    - Tender Fee Details (amount, payable to, at, exemption)
+    - EMD Fee Details (amount, fee type, payable to, at, exemption)
+    - Work Item Details (title, work description, tender value, contract type)
+    - Critical Dates (published, bid opening, document download start/end, etc.)
+    - Tender Documents (NIT document name, description, size in KB, download links)
+    - 'Download as zip file' link
+    """
+    detail_url = tender.get("detail_url")
+    if not detail_url:
+        return {}
+
+    ctx = ssl._create_unverified_context()
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Referer': 'https://eprocure.gov.in/eprocure/app'
+    }
+    req = urllib.request.Request(detail_url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=20) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            details = parse_cpp_tender_detail_page(html, base_url='https://eprocure.gov.in/eprocure/app')
+            return details if isinstance(details, dict) else {}
+    except Exception as e:
+        print(f"[CPP] enrich_cpp_tender_detail error: {e}")
+        return {}

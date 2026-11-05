@@ -249,5 +249,23 @@ class TestCppTenderWorkflow(unittest.TestCase):
             # Ensure no CPP tender got mixed into Bihar view
             self.assertFalse(any(t.get("tenderId") == "2026_DOP_933186_1" for t in b_data["tenders"]))
 
+    def test_06_pagination_loadnext_and_total_records(self):
+        """Verify loadNext pagination links and Total records extraction."""
+        html = """
+        <table id="table" class="list_table">
+          <tr><th>S.No</th><th>e-Published Date</th><th>Bid Submission Closing Date</th><th>Tender Opening Date</th><th>Title and Ref.No./Tender ID</th><th>Organisation Chain</th><th>Tender Value in ₹</th></tr>
+          <tr><td>1</td><td>04-Nov-2026</td><td>26-Nov-2026</td><td>27-Nov-2026</td><td><a href="/eprocure/app?page=FrontEndTenderDetails&service=direct&sp=XYZ">Supply of Spinning Wheel [CWDB/2026][2026_CWDB_933178_1]</a></td><td>Central Wool Development Board</td><td>1,00,000</td></tr>
+        </table>
+        <div>Total records: 2605</div>
+        <a href="/eprocure/app?component=loadPrevious&page=FrontEndLatestActiveTenders&service=direct&session=T">&lt; Previous</a>
+        <a href="/eprocure/app?component=loadNext&page=FrontEndLatestActiveTenders&service=direct&session=T">Next &gt;</a>
+        """
+        res = parse_cpp_search_results_page(html, base_url="https://eprocure.gov.in/eprocure/app")
+        self.assertEqual(len(res["tenders"]), 1)
+        pag = res["pagination"]
+        self.assertEqual(pag["total_records_portal"], 2605)
+        self.assertTrue("component=loadNext" in pag["next_page_url"])
+        self.assertTrue(pag["next_page_url"].startswith("https://eprocure.gov.in/eprocure/app?component=loadNext"))
+
 if __name__ == "__main__":
     unittest.main()
