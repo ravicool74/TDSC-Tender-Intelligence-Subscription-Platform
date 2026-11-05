@@ -29,6 +29,15 @@ class TestCppEndToEnd(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
+        # Backup original CPP_VIEW_JSON
+        cls.original_data = None
+        if os.path.exists(CPP_VIEW_JSON):
+            try:
+                with open(CPP_VIEW_JSON, 'r', encoding='utf-8') as f:
+                    cls.original_data = f.read()
+            except Exception:
+                pass
+
         # Start server in background thread on TEST_PORT
         cls.httpd = HTTPServer(('127.0.0.1', TEST_PORT), server.PaidTenderRequestHandler)
         cls.server_thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
@@ -39,6 +48,13 @@ class TestCppEndToEnd(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.shutdown()
         cls.httpd.server_close()
+        # Restore original CPP_VIEW_JSON
+        if cls.original_data is not None:
+            try:
+                with open(CPP_VIEW_JSON, 'w', encoding='utf-8') as f:
+                    f.write(cls.original_data)
+            except Exception:
+                pass
 
     def setUp(self):
         with open(CPP_VIEW_JSON, 'w', encoding='utf-8') as f:

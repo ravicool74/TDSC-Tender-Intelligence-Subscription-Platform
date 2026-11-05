@@ -1460,3 +1460,110 @@ def enrich_cpp_tender_detail(tender: dict) -> dict:
     except Exception as e:
         print(f"[CPP] enrich_cpp_tender_detail error: {e}")
         return {}
+
+
+def sync_cpp_single_tender_live(tender_id: str) -> dict:
+    """
+    Connects directly to eprocure.gov.in for a SINGLE tender.
+    Updates cpp_tenders_view.json with latest due date, PAC, EMD, fee, instruments, and documents.
+    Returns { "success": True, "updatedTender": ..., "changesDetected": [...] }
+    """
+    store = load_cpp_tenders_store()
+    tenders = store.get("tenders", [])
+    target = None
+    tid_lower = str(tender_id).strip().lower()
+
+    for t in tenders:
+        if str(t.get("tender_id", "")).strip().lower() == tid_lower or str(t.get("canonical_key", "")).strip().lower() == tid_lower:
+            target = t
+            break
+
+    if not target:
+        return {"success": False, "error": f"Tender ID '{tender_id}' not found in CPP dataset"}
+
+    enriched = enrich_cpp_tender_detail(target)
+    if not enriched or not isinstance(enriched, dict):
+        return {"success": False, "error": "Portal se live detail fetch nahi ho saka (eprocure.gov.in session issue)"}
+
+    changes_detected = []
+    # Compare Due Date
+    old_due = target.get("bid_closing_date") or target.get("bid_submission_end_date") or ""
+    new_due = enriched.get("bid_closing_date") or enriched.get("bid_submission_end_date") or ""
+    if new_due and old_due and new_due != old_due:
+        changes_detected.append(f"Due Date: {old_due} ➔ {new_due}")
+
+    # Compare Value
+    old_val = target.get("tender_value_inr", 0)
+    new_val = enriched.get("tender_value_inr", 0)
+    if new_val and new_val != old_val:
+        changes_detected.append(f"Value: {target.get('tender_value_formatted')} ➔ {enriched.get('tender_value_formatted')}")
+
+    target.update(enriched)
+    target["last_live_checked"] = datetime.now().strftime("%d-%m-%Y %I:%M %p")
+    save_cpp_tenders_batch([target], allow_update=True)
+
+    return {
+        "success": True,
+        "tenderId": tender_id,
+        "updatedTender": target,
+        "changesDetected": changes_detected,
+        "message": f"Central Tender #{tender_id} successfully verified with eprocure.gov.in live!" + (f" ({', '.join(changes_detected)})" if changes_detected else " (Data is current, no changes on portal)")
+    }
+
+def download_all_cpp_tender_attachments(tender_id: str) -> dict:
+    """
+    Downloads all available NIT notices and ZIP file for a Central CPPP tender
+    to downloads_cpp/tender_<clean_tid>/.
+    """
+    store = load_cpp_tenders_store()
+    tenders = store.get("tenders", [])
+    target = None
+    tid_lower = str(tender_id).strip().lower()
+
+    for t in tenders:
+        if str(t.get("tender_id", "")).strip().lower() == tid_lower or str(t.get("canonical_key", "")).strip().lower() == tid_lower:
+            target = t
+            break
+
+    if not target:
+        return {"success": False, "error": f"Tender '{tender_id}' not found"}
+
+    # Enrich first if documents not yet present
+    if target.get("detail_url") and not target.get("documents"):
+        try:
+            enriched = enrich_cpp_tender_detail(target)
+            if enriched:
+                target.update(enriched)
+                save_cpp_tenders_batch([target], allow_update=True)
+        except Exception:
+            pass
+
+    clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', target.get("tender_id", tender_id))
+    tender_folder = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}")
+    os.makedirs(tender_folder, exist_ok=True)
+
+    downloaded = []
+    # 1. Download NIT Documents
+    docs = target.get("documents", [])
+    for idx, doc in enumerate(docs):
+        res = download_cpp_document(tender_id, doc_type="nit", doc_index=idx)
+        if res.get("success"):
+            downloaded.append(res.get("filename"))
+
+    # 2. Download ZIP if available
+    if target.get("zip_download_url"):
+        res_zip = download_cpp_document(tender_id, doc_type="zip")
+        if res_zip.get("success"):
+            downloaded.append(res_zip.get("filename"))
+
+    target["hasDownloaded"] = len(downloaded) > 0
+    target["tenderFolder"] = tender_folder
+    save_cpp_tenders_batch([target], allow_update=True)
+
+    return {
+        "success": True,
+        "downloadedCount": len(downloaded),
+        "files": downloaded,
+        "folder": tender_folder,
+        "message": f"Successfully downloaded {len(downloaded)} file(s) into tender_{clean_tid}"
+    }

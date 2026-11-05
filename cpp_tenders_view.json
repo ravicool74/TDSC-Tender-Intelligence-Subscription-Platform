@@ -1,6 +1,650 @@
 {
   "portal": "Central Public Procurement Portal (eprocure.gov.in)",
-  "updated_at": "2026-11-05T00:00:00",
-  "total_count": 0,
-  "tenders": []
+  "updated_at": "2026-11-05T12:14:50.421405",
+  "total_count": 10,
+  "tenders": [
+    {
+      "s_no": "1.",
+      "canonical_key": "2023_MoRTH_771865_1",
+      "tender_id": "2023_MoRTH_771865_1",
+      "system_tender_no": "2023_MoRTH_771865_1",
+      "tender_ref_no": "RW/PAT/NH133E/Bhaglpur73/22-23",
+      "title": "Construction of Four Lane with paved shoulder of Bhagalpur Kharhara Village (Dhaka More) from Km 0.000 to KM 36.600 (Total length 36.600 Km) of NH-133E on EPC mode",
+      "work_description": "Construction of Four Lane with paved shoulder of Bhagalpur Kharhara Village (Dhaka More) from Km 0.000 to KM 36.600 (Total length 36.600 Km) of NH-133E in the State of Bihar on EPC mode",
+      "organisation_chain": "Ministry of Road Transport and Highways||P1 Delhi - MoRTH||RO Patna - MoRTH",
+      "department": "Ministry of Road Transport and Highways",
+      "state_district": "Bihar / Patna",
+      "tender_value_inr": 7637200000.0,
+      "tender_value_formatted": "₹ 7,637,200,000.00",
+      "budget_slab": "Above5Cr",
+      "contract_type": "Tender",
+      "published_date": "15-Sep-2023 05:00 PM",
+      "bid_submission_start_date": "23-Oct-2023 11:00 AM",
+      "bid_closing_date": "30-Nov-2026 04:00 PM",
+      "bid_submission_end_date": "30-Nov-2026 04:00 PM",
+      "bid_opening_date": "01-Dec-2026 11:00 AM",
+      "tender_fee_inr": 80000.0,
+      "tender_fee_formatted": "₹ 80,000.00",
+      "fee_payable_to": "RPAO(NH) MoRTH",
+      "fee_payable_at": "Patna",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 76500000.0,
+      "emd_amount_formatted": "₹ 76,500,000.00",
+      "emd_payable_to": "RPAO(NH) MoRTH",
+      "emd_payable_at": "Patna",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Bankers Cheque"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "Bank Guarantee"
+        },
+        {
+          "s_no": "4",
+          "instrument_type": "RTGS / NEFT"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "Tendernotice_1.pdf",
+          "description": "Official NIT Notice",
+          "size_kb": "163.34",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_811387.xls",
+          "description": "Bill of Quantities (BOQ)",
+          "size_kb": "285.50",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "3",
+          "name": "EPC_Agreement.pdf",
+          "description": "EPC Agreement & Conditions",
+          "size_kb": "1420.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "2.",
+      "canonical_key": "2026_MoRTH_933175_1",
+      "tender_id": "2026_MoRTH_933175_1",
+      "system_tender_no": "2026_MoRTH_933175_1",
+      "tender_ref_no": "4199/12 M-NH/2026 dt 04.11.2026",
+      "title": "Rehabilitation and up-gradation to 4-lane configuration from Km 9.575 to Km 13.100 of (Majhola-Khatima) NH 731-K in the State of Uttarakhand",
+      "work_description": "Rehabilitation and up-gradation to 4-lane configuration from Km 9.575 to Km 13.100 of (Majhola-Khatima) NH 731-K in the State of Uttarakhand under NH(O) Annual Plan 2026-27",
+      "organisation_chain": "Ministry of Road Transport and Highways||P1 Delhi - MoRTH||RO Dehradun - MoRTH||NH Uttarakhand PWD-Haldwani - MoRTH",
+      "department": "Ministry of Road Transport and Highways",
+      "state_district": "Uttarakhand / Dehradun",
+      "tender_value_inr": 317500000.0,
+      "tender_value_formatted": "₹ 317,500,000.00",
+      "budget_slab": "Above5Cr",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "03-Dec-2026 02:00 PM",
+      "bid_submission_end_date": "03-Dec-2026 02:00 PM",
+      "bid_opening_date": "04-Dec-2026 02:00 PM",
+      "tender_fee_inr": 11800.0,
+      "tender_fee_formatted": "₹ 11,800.00",
+      "fee_payable_to": "RPAO MoRTH",
+      "fee_payable_at": "New Delhi",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 6350000.0,
+      "emd_amount_formatted": "₹ 6,350,000.00",
+      "emd_payable_to": "Executive Engineer NH Haldwani",
+      "emd_payable_at": "Haldwani",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Bank Guarantee"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "FDR"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "Tendernotice_NIT.pdf",
+          "description": "Detailed NIT Document",
+          "size_kb": "452.10",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Majhola.xls",
+          "description": "Financial BOQ",
+          "size_kb": "195.40",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": true
+    },
+    {
+      "s_no": "3.",
+      "canonical_key": "2026_MoRTH_933179_1",
+      "tender_id": "2026_MoRTH_933179_1",
+      "system_tender_no": "2026_MoRTH_933179_1",
+      "tender_ref_no": "09/2026-27/SE/NH/KKD/SN.",
+      "title": "CRIF-2025-26 - Improvements to Aravanchal-Purakunnu-Perool- Narikkampally-Pilathara Road in Kannur district",
+      "work_description": "CRIF-2025-26 - Improvements to Aravanchal-Purakunnu-Perool- Narikkampally-Pilathara Road in Kannur district-General Civil Work-1",
+      "organisation_chain": "Ministry of Road Transport and Highways||P7 Delh - MoRTH||RO Thiruvananthapuram - MoRTH||NH Kerala PWD-KOZHIKODE - MoRTH",
+      "department": "Ministry of Road Transport and Highways",
+      "state_district": "Kerala / Kannur",
+      "tender_value_inr": 326530554.0,
+      "tender_value_formatted": "₹ 326,530,554.00",
+      "budget_slab": "Above5Cr",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "30-Nov-2026 05:00 PM",
+      "bid_submission_end_date": "30-Nov-2026 05:00 PM",
+      "bid_opening_date": "02-Dec-2026 11:00 AM",
+      "tender_fee_inr": 11800.0,
+      "tender_fee_formatted": "₹ 11,800.00",
+      "fee_payable_to": "Superintending Engineer NH Kozhikode",
+      "fee_payable_at": "Kozhikode",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 5000000.0,
+      "emd_amount_formatted": "₹ 5,000,000.00",
+      "emd_payable_to": "Superintending Engineer NH Kozhikode",
+      "emd_payable_at": "Kozhikode",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Online e-Payment"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Bank Guarantee"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_CRIF_Kannur.pdf",
+          "description": "NIT Document",
+          "size_kb": "384.20",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Kannur_Road.xls",
+          "description": "BOQ Excel Sheet",
+          "size_kb": "220.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "4.",
+      "canonical_key": "2026_AIMSM_933167_1",
+      "tender_id": "2026_AIMSM_933167_1",
+      "system_tender_no": "2026_AIMSM_933167_1",
+      "tender_ref_no": "AIIMS MG/Engineering Dept/NIT/2026-27/18",
+      "title": "Day to Day Operation and Comprehensive Annual Maintenance Contract of 33kV and 11kV Electrical Substations, Online UPS, HT and LT DG sets, External Lighting System at AIIMS, Mangalagiri",
+      "work_description": "Day to Day Operation and Comprehensive Annual Maintenance Contract of 33kV and 11kV Electrical Substations, Online UPS, HT and LT DG sets, External Lighting System and LED signages installed at AIIMS, Mangalagiri",
+      "organisation_chain": "All India Institute of Medical Sciences-Mangalagiri-Andhra Pradesh||Procurement Cell - AIIMS Mangalagiri",
+      "department": "All India Institute of Medical Sciences-Mangalagiri-Andhra Pradesh",
+      "state_district": "Andhra Pradesh / Mangalagiri",
+      "tender_value_inr": 40044578.0,
+      "tender_value_formatted": "₹ 40,044,578.00",
+      "budget_slab": "2Crto5Cr",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "14-Nov-2026 06:30 PM",
+      "bid_submission_end_date": "14-Nov-2026 06:30 PM",
+      "bid_opening_date": "16-Nov-2026 10:00 AM",
+      "tender_fee_inr": 0.0,
+      "tender_fee_formatted": "₹ 0.00",
+      "fee_payable_to": "Director AIIMS Mangalagiri",
+      "fee_payable_at": "Mangalagiri",
+      "fee_exemption_allowed": "Yes",
+      "emd_amount_inr": 800892.0,
+      "emd_amount_formatted": "₹ 800,892.00",
+      "emd_payable_to": "Director AIIMS Mangalagiri",
+      "emd_payable_at": "Mangalagiri",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "Yes",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "FDR"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "Bank Guarantee"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_Electrical_Substation.pdf",
+          "description": "Detailed Tender Document & Specifications",
+          "size_kb": "890.15",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_AIIMS_Elec.xls",
+          "description": "Bill of Quantities",
+          "size_kb": "310.40",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "5.",
+      "canonical_key": "2026_DDA_933140_1",
+      "tender_id": "2026_DDA_933140_1",
+      "system_tender_no": "2026_DDA_933140_1",
+      "tender_ref_no": "50/EE(E)/ELD-3/DDA/2026-27",
+      "title": "New/Misc. work at various sports complex under CE(Sports)",
+      "work_description": "New/Misc. electrical and civil work at various sports complex under Chief Engineer (Sports), DDA, New Delhi",
+      "organisation_chain": "Delhi Development Authority||CE-Electrical-DDA||EE(El) Division-3(Sports)-Khelgaon-DDA",
+      "department": "Delhi Development Authority",
+      "state_district": "Delhi / New Delhi",
+      "tender_value_inr": 3260730.0,
+      "tender_value_formatted": "₹ 3,260,730.00",
+      "budget_slab": "25Lto50L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:35 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:35 PM",
+      "bid_closing_date": "12-Nov-2026 03:00 PM",
+      "bid_submission_end_date": "12-Nov-2026 03:00 PM",
+      "bid_opening_date": "13-Nov-2026 03:30 PM",
+      "tender_fee_inr": 500.0,
+      "tender_fee_formatted": "₹ 500.00",
+      "fee_payable_to": "Senior Accounts Officer Sports DDA",
+      "fee_payable_at": "New Delhi",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 65215.0,
+      "emd_amount_formatted": "₹ 65,215.00",
+      "emd_payable_to": "Senior Accounts Officer Sports DDA",
+      "emd_payable_at": "New Delhi",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "RTGS / NEFT"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_DDA_Sports.pdf",
+          "description": "NIT & General Conditions",
+          "size_kb": "312.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Sports_Complex.xls",
+          "description": "BOQ Rate Schedule",
+          "size_kb": "145.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "6.",
+      "canonical_key": "2026_NHPC_933105_1",
+      "tender_id": "2026_NHPC_933105_1",
+      "system_tender_no": "2026_NHPC_933105_1",
+      "tender_ref_no": "NH/BSPS/CC/CW/31/2026-27/300 Dated 04/11/2026",
+      "title": "Development of existing Earthen Access Road from Switchyard Control Room to Firefighting Tank at BSPS, Surangani",
+      "work_description": "Development of existing Earthen Access Road from Switchyard Control Room to Firefighting Tank and Other Miscellaneous Works at BSPS, Surangani, Chamba (HP)",
+      "organisation_chain": "NHPC Limited||Bairasiul Power Station-NHPC",
+      "department": "NHPC Limited",
+      "state_district": "Himachal Pradesh / Chamba",
+      "tender_value_inr": 3071352.0,
+      "tender_value_formatted": "₹ 3,071,352.00",
+      "budget_slab": "25Lto50L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "12-Nov-2026 03:00 PM",
+      "bid_submission_end_date": "12-Nov-2026 03:00 PM",
+      "bid_opening_date": "16-Nov-2026 03:30 PM",
+      "tender_fee_inr": 590.0,
+      "tender_fee_formatted": "₹ 590.00",
+      "fee_payable_to": "NHPC Limited",
+      "fee_payable_at": "Surangani",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 61500.0,
+      "emd_amount_formatted": "₹ 61,500.00",
+      "emd_payable_to": "NHPC Limited",
+      "emd_payable_at": "Surangani",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "Yes",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Bankers Cheque"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "Bank Guarantee"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_NHPC_Road.pdf",
+          "description": "Tender Documents & Drawings",
+          "size_kb": "620.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_BSPS_Road.xls",
+          "description": "Bill of Quantities",
+          "size_kb": "180.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "7.",
+      "canonical_key": "2026_DFERT_933041_1",
+      "tender_id": "2026_DFERT_933041_1",
+      "system_tender_no": "2026_DFERT_933041_1",
+      "tender_ref_no": "FAGMIL-5(EDP)/82/Vivek Vihar IInd Floor Rent",
+      "title": "Rent for Office Building",
+      "work_description": "Hiring of Office Space on Lease / Rent for Corporate Office at Vivek Vihar, Jodhpur",
+      "organisation_chain": "Department of Fertilisers||FCI Aravali Gypsum and Minerals India Ltd,Jodhpur,FAGMIL,MCF",
+      "department": "Department of Fertilisers",
+      "state_district": "Rajasthan / Jodhpur",
+      "tender_value_inr": 1821600.0,
+      "tender_value_formatted": "₹ 1,821,600.00",
+      "budget_slab": "0to25L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "25-Nov-2026 06:40 PM",
+      "bid_submission_end_date": "25-Nov-2026 06:40 PM",
+      "bid_opening_date": "26-Nov-2026 06:40 PM",
+      "tender_fee_inr": 0.0,
+      "tender_fee_formatted": "₹ 0.00",
+      "fee_payable_to": "Nil",
+      "fee_payable_at": "Nil",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 36432.0,
+      "emd_amount_formatted": "₹ 36,432.00",
+      "emd_payable_to": "FAGMIL",
+      "emd_payable_at": "Jodhpur",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "RTGS / NEFT"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_Office_Rent.pdf",
+          "description": "Tender Document for Renting",
+          "size_kb": "290.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Rent.xls",
+          "description": "Financial Bid Format",
+          "size_kb": "110.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "8.",
+      "canonical_key": "2026_DOP_933186_1",
+      "tender_id": "2026_DOP_933186_1",
+      "system_tender_no": "2026_DOP_933186_1",
+      "tender_ref_no": "NIT/EEPCND/2026-27/27",
+      "title": "Provision of day to day maintenance of Postal staff quarters, AO buildings and PO buildings under Postal Civil Enquiry, Sarojini Nagar, New Delhi",
+      "work_description": "Provision of day to day maintenance of Postal staff quarters, AO buildings and PO buildings under Postal Civil Enquiry, Sarojini Nagar, New Delhi",
+      "organisation_chain": "Department of Posts||Delhi Circle, Dept. of Posts||Off. of EE(C),Delhi Circle,POST||Postal Civil Division,EE(C),Delhi Circle",
+      "department": "Department of Posts",
+      "state_district": "Delhi / New Delhi",
+      "tender_value_inr": 1076893.0,
+      "tender_value_formatted": "₹ 1,076,893.00",
+      "budget_slab": "0to25L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:55 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:55 PM",
+      "bid_closing_date": "12-Nov-2026 03:00 PM",
+      "bid_submission_end_date": "12-Nov-2026 03:00 PM",
+      "bid_opening_date": "13-Nov-2026 03:30 PM",
+      "tender_fee_inr": 0.0,
+      "tender_fee_formatted": "₹ 0.00",
+      "fee_payable_to": "Accounts Officer Postal Civil Division",
+      "fee_payable_at": "New Delhi",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 21538.0,
+      "emd_amount_formatted": "₹ 21,538.00",
+      "emd_payable_to": "Accounts Officer Postal Civil Division New Delhi",
+      "emd_payable_at": "Accounts Officer Postal Civil Division New Delhi",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "No",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "R-T-G-S"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "FDR"
+        },
+        {
+          "s_no": "4",
+          "instrument_type": "NEFT"
+        },
+        {
+          "s_no": "5",
+          "instrument_type": "Bankers Cheque"
+        },
+        {
+          "s_no": "6",
+          "instrument_type": "Bank Guarantee"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "Tendernotice_1.pdf",
+          "description": "NIT",
+          "size_kb": "1247.79",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Postal_Sarojini.xls",
+          "description": "Price BOQ",
+          "size_kb": "260.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "9.",
+      "canonical_key": "2026_CWDB_933178_1",
+      "tender_id": "2026_CWDB_933178_1",
+      "system_tender_no": "2026_CWDB_933178_1",
+      "tender_ref_no": "CWDB/IWDP/WPS/Small Tools/2025",
+      "title": "Supply of Spinning Wheel",
+      "work_description": "Procurement and Supply of Spinning Wheel for wool processing clusters under IWDP scheme",
+      "organisation_chain": "Central Wool Development Board||Ministry of Textiles",
+      "department": "Central Wool Development Board",
+      "state_district": "Rajasthan / Jodhpur",
+      "tender_value_inr": 2450000.0,
+      "tender_value_formatted": "₹ 2,450,000.00",
+      "budget_slab": "0to25L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:40 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:40 PM",
+      "bid_closing_date": "26-Nov-2026 06:00 PM",
+      "bid_submission_end_date": "26-Nov-2026 06:00 PM",
+      "bid_opening_date": "27-Nov-2026 03:00 PM",
+      "tender_fee_inr": 1000.0,
+      "tender_fee_formatted": "₹ 1,000.00",
+      "fee_payable_to": "Central Wool Development Board",
+      "fee_payable_at": "Jodhpur",
+      "fee_exemption_allowed": "Yes",
+      "emd_amount_inr": 49000.0,
+      "emd_amount_formatted": "₹ 49,000.00",
+      "emd_payable_to": "Central Wool Development Board",
+      "emd_payable_at": "Jodhpur",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "Yes",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Bankers Cheque"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_Spinning_Wheel.pdf",
+          "description": "Tender Specifications & Schedule",
+          "size_kb": "410.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Spinning.xls",
+          "description": "Financial BOQ",
+          "size_kb": "150.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "",
+      "is_shortlisted": false
+    },
+    {
+      "s_no": "10.",
+      "canonical_key": "2026_IITR_933146_1",
+      "tender_id": "2026_IITR_933146_1",
+      "system_tender_no": "2026_IITR_933146_1",
+      "tender_ref_no": "2026270414/MM-6/RT-1/687",
+      "title": "Product Gas Analyzer",
+      "work_description": "Supply, Installation and Commissioning of Product Gas Analyzer at Chemical Engineering Dept, IIT Roorkee",
+      "organisation_chain": "Indian Institute of Technology Roorkee||Material Management - IIT Roorkee",
+      "department": "Indian Institute of Technology Roorkee",
+      "state_district": "Uttarakhand / Roorkee",
+      "tender_value_inr": 4500000.0,
+      "tender_value_formatted": "₹ 4,500,000.00",
+      "budget_slab": "25Lto50L",
+      "contract_type": "Tender",
+      "published_date": "04-Nov-2026 06:30 PM",
+      "bid_submission_start_date": "04-Nov-2026 06:30 PM",
+      "bid_closing_date": "25-Nov-2026 03:00 PM",
+      "bid_submission_end_date": "25-Nov-2026 03:00 PM",
+      "bid_opening_date": "25-Nov-2026 03:30 PM",
+      "tender_fee_inr": 0.0,
+      "tender_fee_formatted": "₹ 0.00",
+      "fee_payable_to": "IIT Roorkee",
+      "fee_payable_at": "Roorkee",
+      "fee_exemption_allowed": "Yes",
+      "emd_amount_inr": 90000.0,
+      "emd_amount_formatted": "₹ 90,000.00",
+      "emd_payable_to": "IIT Roorkee",
+      "emd_payable_at": "Roorkee",
+      "emd_fee_type": "fixed",
+      "emd_exemption_allowed": "Yes",
+      "instruments": [
+        {
+          "s_no": "1",
+          "instrument_type": "Demand Draft"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "FDR"
+        }
+      ],
+      "documents": [
+        {
+          "s_no": "1",
+          "name": "NIT_Gas_Analyzer.pdf",
+          "description": "Technical Specifications & NIT",
+          "size_kb": "530.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ_Analyzer.xls",
+          "description": "Price Bid BOQ",
+          "size_kb": "175.00",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+        }
+      ],
+      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "is_shortlisted": false
+    }
+  ]
 }

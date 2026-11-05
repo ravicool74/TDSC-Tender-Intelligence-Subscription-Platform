@@ -54,7 +54,8 @@ from cpp_tender_manager import (
     load_cpp_tenders_store, save_cpp_tenders_batch, toggle_cpp_shortlist,
     init_cpp_session, submit_cpp_search_and_crawl, crawl_next_cpp_page,
     import_cpp_raw_html, download_cpp_document, generate_cpp_excel_workbook,
-    enrich_cpp_tender_detail, CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
+    enrich_cpp_tender_detail, sync_cpp_single_tender_live,
+    download_all_cpp_tender_attachments, CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
 )
 
 PORT = int(os.environ.get("PORT", 8000))
@@ -749,9 +750,9 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 except ValueError:
                     page = 1
                 try:
-                    limit = max(1, min(200, int(query.get('limit', ['50'])[0])))
+                    limit = max(1, min(5000, int(query.get('limit', ['1000'])[0])))
                 except ValueError:
-                    limit = 50
+                    limit = 1000
 
                 filtered = []
                 total_val_sum = 0.0
@@ -907,6 +908,18 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             return
 
         # 18. Dedicated CPP Downloaded File Server (PDF / ZIP)
+        elif path == '/api/cpp/open_folder':
+            tender_id = query.get('id', [query.get('tender_id', [''])])[0].strip()
+            clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', tender_id)
+            target_folder = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}")
+            os.makedirs(target_folder, exist_ok=True)
+            try:
+                subprocess.Popen(['explorer.exe', os.path.abspath(target_folder)])
+                self.send_json({"status": "opened", "folder": target_folder})
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
+            return
+
         elif path == '/api/cpp/downloaded_file':
             rel_file = query.get('path', [''])[0].strip().replace('\\', '/')
             if not rel_file or not rel_file.startswith('downloads_cpp/'):
@@ -1851,6 +1864,42 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
 
             res = download_cpp_document(tender_id, doc_type=doc_type, doc_index=doc_index, session_id=session_id)
             self.send_json(res, status=200 if res.get('success') else 500)
+            return
+
+        # 25. CPP Dedicated Single-Tender Live Refresh
+        elif path == '/api/cpp/refresh_single':
+            body = self.read_json_body()
+            tender_id = body.get('tenderId') or body.get('tender_id') or body.get('id', '')
+            if not tender_id:
+                self.send_json({"success": False, "error": "Missing tenderId"}, status=400)
+                return
+            res = sync_cpp_single_tender_live(str(tender_id))
+            self.send_json(res, status=200)
+            return
+
+        # 26. CPP Download All Documents for Tender
+        elif path == '/api/cpp/download_all':
+            body = self.read_json_body()
+            tender_id = body.get('tenderId') or body.get('tender_id') or body.get('id', '')
+            if not tender_id:
+                self.send_json({"success": False, "error": "Missing tenderId"}, status=400)
+                return
+            res = download_all_cpp_tender_attachments(str(tender_id))
+            self.send_json(res, status=200 if res.get('success') else 500)
+            return
+
+        # 27. CPP Open Folder via POST
+        elif path == '/api/cpp/open_folder':
+            body = self.read_json_body()
+            tender_id = body.get('tenderId') or body.get('tender_id') or body.get('id', '')
+            clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', str(tender_id))
+            target_folder = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}")
+            os.makedirs(target_folder, exist_ok=True)
+            try:
+                subprocess.Popen(['explorer.exe', os.path.abspath(target_folder)])
+                self.send_json({"status": "opened", "folder": target_folder})
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
             return
 
         else:

@@ -144,6 +144,25 @@ SAMPLE_SEARCH_RESULTS_HTML = """
 
 class TestCppTenderWorkflow(unittest.TestCase):
 
+    @classmethod
+    def setUpClass(cls):
+        cls.original_data = None
+        if os.path.exists(CPP_VIEW_JSON):
+            try:
+                with open(CPP_VIEW_JSON, 'r', encoding='utf-8') as f:
+                    cls.original_data = f.read()
+            except Exception:
+                pass
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.original_data is not None:
+            try:
+                with open(CPP_VIEW_JSON, 'w', encoding='utf-8') as f:
+                    f.write(cls.original_data)
+            except Exception:
+                pass
+
     def setUp(self):
         # Reset CPP store for clean isolated test runs
         with open(CPP_VIEW_JSON, 'w', encoding='utf-8') as f:
