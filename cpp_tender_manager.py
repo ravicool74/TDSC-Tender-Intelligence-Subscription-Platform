@@ -446,7 +446,7 @@ def parse_cpp_search_results_page(html_content: str, base_url: str = "https://ep
             "title": raw_title_ref,
             "work_description": raw_title_ref,
             "organisation_chain": raw_org,
-            "department": raw_org.split('||')[0].strip() if '||' in raw_org else raw_org,
+            "department": (raw_org.split('||')[0].strip() if '||' in raw_org else raw_org) if raw_org else "",
             "state_district": extract_state_district_strict(raw_org, raw_title_ref),
             "tender_value_inr": val_float,
             "tender_value_formatted": val_fmt,
@@ -695,7 +695,8 @@ def parse_cpp_tender_detail_page(html_or_text: str, base_url: str = "https://epr
 
     # Location
     data['state_district'] = extract_state_district_strict(data['organisation_chain'], data.get('title', ''))
-    data['department'] = data['organisation_chain'].split('||')[0].strip() if '||' in data['organisation_chain'] else data['organisation_chain']
+    org_str = str(data.get('organisation_chain') or '')
+    data['department'] = (org_str.split('||')[0].strip() if '||' in org_str else org_str)
     
     # Canonical key
     tid = data.get('tender_id', '')
@@ -784,7 +785,7 @@ def init_cpp_session(mode: str = "active_tenders") -> dict:
 
     try:
         with urllib.request.urlopen(req, context=ctx, timeout=45) as resp:
-            raw_cookies = resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]
+            raw_cookies = (resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]) or []
             cookie_parts = []
             for c in raw_cookies:
                 if c:
@@ -874,7 +875,7 @@ def submit_cpp_search_and_crawl(session_id: str, captcha_text: str, tender_id: s
     try:
         with urllib.request.urlopen(req, context=ctx, timeout=30) as resp:
             # Update cookie if modified
-            new_cookies = resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]
+            new_cookies = (resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]) or []
             for c in new_cookies:
                 if c and 'JSESSIONID' in c:
                     cookie = c.split(';')[0].strip()
@@ -941,20 +942,23 @@ def submit_cpp_search_and_crawl(session_id: str, captcha_text: str, tender_id: s
                 processed_tenders.append(t)
 
             # Save batch with duplicate rejection
-            save_res = save_cpp_tenders_batch(processed_tenders, allow_update=False)
+            save_res = save_cpp_tenders_batch(processed_tenders, allow_update=False) or {}
+            added_cnt = save_res.get("added", len(processed_tenders))
+            skipped_cnt = duplicates_skipped + save_res.get("skipped_duplicates", 0)
+            total_cnt = save_res.get("total", len(existing_keys) + added_cnt)
 
             # Store last pagination in session for traversal
-            session["last_pagination"] = pagination
+            session["last_pagination"] = pagination or {}
             session["last_results_html"] = html
 
             return {
                 "success": True,
                 "tenders_found": len(tenders),
-                "added": save_res["added"],
-                "skipped_duplicates": duplicates_skipped + save_res["skipped_duplicates"],
-                "total_in_system": save_res["total"],
-                "pagination": pagination,
-                "message": f"Successfully imported {save_res['added']} new tenders. {duplicates_skipped + save_res['skipped_duplicates']} duplicates skipped."
+                "added": added_cnt,
+                "skipped_duplicates": skipped_cnt,
+                "total_in_system": total_cnt,
+                "pagination": pagination or {},
+                "message": f"Successfully imported {added_cnt} new tenders. {skipped_cnt} duplicates skipped."
             }
 
     except Exception as e:
