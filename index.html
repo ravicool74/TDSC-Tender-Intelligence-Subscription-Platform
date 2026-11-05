@@ -1788,92 +1788,150 @@
     <!-- ============================================================== -->
     <!-- MODAL: CPPP USER-CONTROLLED LIVE EXTRACTOR & MANUAL CAPTCHA    -->
     <!-- ============================================================== -->
+        <!-- ============================================================== -->
+    <!-- MODAL: CPPP USER-CONTROLLED LIVE EXTRACTOR & MANUAL CAPTCHA    -->
+    <!-- EXACT MATCH WITH eprocure.gov.in ACTIVE TENDERS INTERFACE     -->
+    <!-- ============================================================== -->
     <div class="modal-overlay" id="cppCrawlerModal">
-        <div class="modal-card modal-large" style="max-width: 680px;">
-            <div class="modal-head" style="background: linear-gradient(135deg, #064e3b, #047857);">
-                <h3 style="display: flex; align-items: center; gap: 8px;">
-                    <span>🇮🇳</span> CPPP Live Extractor &amp; Manual CAPTCHA
-                </h3>
+        <div class="modal-card modal-large" style="max-width: 820px; border: 2px solid #005a9c;">
+            <!-- Official style portal header -->
+            <div style="background: #005a9c; color: white; padding: 12px 18px; display: flex; justify-content: space-between; align-items: center;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span style="font-size: 1.4rem;">🏛️</span>
+                    <div>
+                        <div style="font-weight: 800; font-size: 1.05rem; letter-spacing: 0.3px;">eProcurement System Government of India (GeM-CPPP)</div>
+                        <div style="font-size: 0.76rem; opacity: 0.9;">Central Public Procurement Portal &bull; Live Active Tenders &bull; https://eprocure.gov.in/eprocure/app</div>
+                    </div>
+                </div>
                 <button class="modal-close-btn" onclick="closeCppCrawlerModal()">&times;</button>
             </div>
-            <div class="modal-body">
-                <div style="background: #ecfdf5; border: 1.5px solid #a7f3d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 16px; font-size: 0.85rem; color: #065f46;">
-                    <strong>🛡️ User-Controlled Compliant Crawler:</strong>
-                    Portal CAPTCHA is displayed below for you to solve manually. The engine extracts the search results and deep-dives into tender details politely (1-2s delay), automatically deduplicating against existing records.
-                </div>
 
-                <!-- Step 1: Portal Mode Selection -->
-                <div style="margin-bottom: 14px;">
-                    <label class="control-label" style="font-weight: 700;">Select CPPP Portal Mode:</label>
-                    <div style="display: flex; gap: 10px; margin-top: 6px;">
-                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
-                            <input type="radio" name="cppCrawlMode" value="active_tenders" checked onchange="reloadCppCaptcha()">
-                            <strong>More... / Active Tenders</strong> (FrontEndLatestActiveTenders)
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
-                            <input type="radio" name="cppCrawlMode" value="advanced_search" onchange="reloadCppCaptcha()">
-                            <strong>Advanced Search</strong> (FrontEndAdvancedSearch)
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Step 2: Live Captcha Display & User Input -->
-                <div style="background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="font-weight: 700; font-size: 0.88rem; color: #1e293b;">🔐 Live Portal CAPTCHA:</span>
-                        <button type="button" class="btn-top" style="padding: 4px 10px; font-size: 0.78rem; background: #e2e8f0; color: #334155; border: none;" onclick="reloadCppCaptcha()">
-                            🔄 Reload Captcha
+            <div class="modal-body" style="background: #ffffff; padding: 20px;">
+                <!-- Official Page Title Bar with Back Button -->
+                <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #005a9c; padding-bottom: 8px; margin-bottom: 16px;">
+                    <h3 style="color: #005a9c; font-size: 1.25rem; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px;">
+                        <span>Active Tenders</span>
+                        <span style="font-size: 0.75rem; background: #e0f2fe; color: #0369a1; padding: 2px 8px; border-radius: 4px; font-weight: 600;">Live eprocure.gov.in Session</span>
+                    </h3>
+                    <div style="display: flex; gap: 8px; align-items: center;">
+                        <a href="https://eprocure.gov.in/eprocure/app?page=FrontEndLatestActiveTenders&service=page" target="_blank" style="background: #e2e8f0; color: #1e293b; padding: 4px 10px; border-radius: 4px; text-decoration: none; font-size: 0.78rem; font-weight: 700;">
+                            🔗 Open Official Portal in New Tab
+                        </a>
+                        <button type="button" class="btn-top" style="padding: 4px 12px; background: #64748b; color: white; border: none; font-weight: 700; font-size: 0.8rem;" onclick="closeCppCrawlerModal()">
+                            Back
                         </button>
                     </div>
+                </div>
+
+                <!-- Portal Mode Selection Pills -->
+                <div style="display: flex; gap: 12px; margin-bottom: 14px; background: #f8fafc; padding: 10px 14px; border-radius: 6px; border: 1px solid #e2e8f0; align-items: center;">
+                    <strong style="font-size: 0.84rem; color: #334155;">Mode:</strong>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: #005a9c; font-weight: 700;">
+                        <input type="radio" name="cppCrawlMode" value="active_tenders" checked onchange="reloadCppCaptcha()">
+                        Active Tenders (More...)
+                    </label>
+                    <label style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; color: #334155;">
+                        <input type="radio" name="cppCrawlMode" value="advanced_search" onchange="reloadCppCaptcha()">
+                        Advanced Search
+                    </label>
+                </div>
+
+                <!-- Exact Match Search Table Box as on eprocure.gov.in -->
+                <div style="border: 1px solid #b0c4de; background: #f5f8fc; border-radius: 4px; margin-bottom: 18px;">
+                    <div style="background: #d9e6f2; color: #003366; font-weight: 800; font-size: 0.88rem; padding: 8px 12px; border-bottom: 1px solid #b0c4de;">
+                        Search
+                    </div>
                     
-                    <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 10px;">
-                        <div id="cppCaptchaContainer" style="background: white; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 6px 12px; min-width: 150px; min-height: 48px; display: flex; align-items: center; justify-content: center;">
-                            <span id="cppCaptchaLoading" style="color: #64748b; font-size: 0.82rem;">Fetching live captcha...</span>
-                            <img id="cppCaptchaImg" src="" alt="Live Captcha" style="display: none; height: 42px; border-radius: 4px;">
+                    <div style="padding: 16px;">
+                        <!-- Row 1: Tender ID -->
+                        <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 12px;">
+                            <label style="font-size: 0.86rem; font-weight: 700; color: #333333; text-align: right;">Tender ID</label>
+                            <div>
+                                <input type="text" id="cppCrawlTenderId" class="form-control" style="max-width: 300px; height: 32px; font-size: 0.88rem;" placeholder="e.g. 2026_DOP_933186_1">
+                            </div>
                         </div>
-                        <div style="flex-grow: 1;">
-                            <input type="text" id="cppCaptchaInput" class="form-control" placeholder="Enter CAPTCHA text here..." style="font-size: 1.1rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase;" autocomplete="off">
+
+                        <!-- Row 2: Tender Title -->
+                        <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 12px;">
+                            <label style="font-size: 0.86rem; font-weight: 700; color: #333333; text-align: right;">Tender Title</label>
+                            <div>
+                                <input type="text" id="cppCrawlKeyword" class="form-control" style="max-width: 300px; height: 32px; font-size: 0.88rem;" placeholder="e.g. Civil Maintenance, Postal, IIT...">
+                            </div>
                         </div>
-                    </div>
-                    <div id="cppCaptchaError" style="display: none; color: #dc2626; font-size: 0.82rem; font-weight: 600; margin-top: 4px;">
-                        ⚠️ Invalid Captcha! Please enter the new letters shown above.
+
+                        <!-- Row 3: Select Sorting Option -->
+                        <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 14px;">
+                            <label style="font-size: 0.86rem; font-weight: 700; color: #333333; text-align: right;">Select Sorting Option</label>
+                            <div style="display: flex; gap: 16px; font-size: 0.84rem; color: #333333; flex-wrap: wrap;">
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppSortOption" value="0" checked> Published Date
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppSortOption" value="1"> Closing Date
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppSortOption" value="2"> Opening Date
+                                </label>
+                                <label style="display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                                    <input type="radio" name="cppSortOption" value="3"> Tender ID
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Row 4: Enter Captcha & Live Captcha Image -->
+                        <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1;">
+                            <label style="font-size: 0.86rem; font-weight: 800; color: #b91c1c; text-align: right;">Enter Captcha <span style="color:red;">*</span></label>
+                            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+                                <input type="text" id="cppCaptchaInput" class="form-control" style="width: 170px; height: 38px; font-size: 1.15rem; font-weight: 800; letter-spacing: 2px; text-transform: uppercase; border: 2px solid #005a9c;" placeholder="Enter Captcha" autocomplete="off" onkeydown="if(event.key==='Enter') submitCppCaptchaSearch()">
+                                
+                                <!-- Live Portal Captcha Image -->
+                                <div id="cppCaptchaContainer" style="background: white; border: 1.5px solid #005a9c; border-radius: 4px; padding: 4px 8px; min-width: 130px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center;">
+                                    <span id="cppCaptchaLoading" style="color: #64748b; font-size: 0.78rem;">Loading portal captcha...</span>
+                                    <img id="cppCaptchaImg" src="" alt="Captcha" style="display: none; height: 38px; border-radius: 2px;">
+                                </div>
+
+                                <button type="button" onclick="reloadCppCaptcha()" style="background: none; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px 10px; font-size: 0.78rem; font-weight: 700; color: #005a9c; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    🔄 Refresh
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Instructions matching eprocure.gov.in -->
+                        <div style="color: #005a9c; font-size: 0.78rem; font-style: italic; margin-left: 190px; margin-bottom: 16px;">
+                            Provide Captcha and click on Search button to list all active tenders.
+                        </div>
+
+                        <div id="cppCaptchaError" style="display: none; background: #fee2e2; border: 1px solid #f87171; color: #b91c1c; padding: 8px 12px; border-radius: 4px; font-size: 0.84rem; font-weight: 700; margin-bottom: 14px; text-align: center;">
+                            Invalid Captcha! Please Enter Correct Captcha.
+                        </div>
+
+                        <!-- Action Buttons: Clear & Search -->
+                        <div style="display: flex; justify-content: center; gap: 12px;">
+                            <button type="button" onclick="clearCppForm()" style="background: #e2e8f0; color: #334155; border: 1px solid #cbd5e1; padding: 6px 20px; font-size: 0.9rem; font-weight: 700; border-radius: 4px; cursor: pointer;">
+                                Clear
+                            </button>
+                            <button type="button" id="btnSubmitCppCrawl" onclick="submitCppCaptchaSearch()" style="background: #005a9c; color: white; border: none; padding: 6px 26px; font-size: 0.9rem; font-weight: 800; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15);">
+                                <span id="cppCrawlSpinner" style="display: none;">⏳ </span>
+                                <span id="cppCrawlBtnText">Search</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Optional Filters -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
-                    <div>
-                        <label class="control-label">Tender ID (Optional):</label>
-                        <input type="text" id="cppCrawlTenderId" class="form-control" placeholder="e.g. 2026_DOP_933186_1">
+                <!-- Live Crawl Status & Duplicates Feedback -->
+                <div id="cppCrawlFeedback" style="display: none; background: #ecfdf5; border: 1.5px solid #10b981; border-radius: 6px; padding: 14px 18px; margin-top: 14px;">
+                    <div style="font-weight: 800; color: #065f46; font-size: 0.95rem; margin-bottom: 6px;" id="cppFeedbackMsg">✅ Search &amp; Crawl Successful!</div>
+                    <div style="font-size: 0.86rem; color: #047857; display: flex; gap: 18px; flex-wrap: wrap;" id="cppFeedbackStats">
                     </div>
-                    <div>
-                        <label class="control-label">Tender Title / Keyword (Optional):</label>
-                        <input type="text" id="cppCrawlKeyword" class="form-control" placeholder="e.g. Civil Maintenance, Postal, IIT...">
-                    </div>
-                </div>
-
-                <!-- Action Button -->
-                <button type="button" id="btnSubmitCppCrawl" class="btn-subscribe btn-sub-primary" style="background: #047857; margin-bottom: 14px;" onclick="submitCppCaptchaSearch()">
-                    <span id="cppCrawlSpinner" style="display: none;">⏳ </span>
-                    <span id="cppCrawlBtnText">🚀 Search &amp; Crawl Central Tenders (सर्च और डेटा खींचें)</span>
-                </button>
-
-                <!-- Live Crawl Status & Pagination Traversal Feedback -->
-                <div id="cppCrawlFeedback" style="display: none; background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 12px 16px; margin-top: 10px;">
-                    <div style="font-weight: 700; color: #166534; margin-bottom: 4px;" id="cppFeedbackMsg">Crawl Completed!</div>
-                    <div style="font-size: 0.84rem; color: #14532d; display: flex; gap: 16px; flex-wrap: wrap;" id="cppFeedbackStats">
-                        <!-- Stats filled dynamically -->
-                    </div>
-                    <div id="cppPaginationBox" style="margin-top: 10px; display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
-                        <span style="font-size: 0.82rem; font-weight: 700; color: #1e3a8a;">Next Pages Available:</span>
-                        <div id="cppPageButtons" style="display: inline-flex; gap: 4px;"></div>
+                    <div id="cppPaginationBox" style="margin-top: 12px; padding-top: 10px; border-top: 1px dashed #6ee7b7; display: none; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <strong style="font-size: 0.84rem; color: #065f46;">Site Pagination (&lt;&lt; &lt; 1 2 3 ... &gt; &gt;&gt;):</strong>
+                        <div id="cppPageButtons" style="display: inline-flex; gap: 6px;"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- ============================================================== -->
     <!-- MODAL: CPPP PASTE HTML / OFFLINE IMPORTER                      -->
     <!-- ============================================================== -->
     <div class="modal-overlay" id="cppPasteModal">
@@ -2190,7 +2248,7 @@
         // Toggle CPPP Shortlist
         async function toggleCppShortlist(tenderId) {
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/toggle_shortlist', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/toggle_shortlist`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ tender_id: tenderId })
@@ -2219,6 +2277,15 @@
             reloadCppCaptcha();
         }
 
+        function clearCppForm() {
+            const tId = document.getElementById('cppCrawlTenderId');
+            const kw = document.getElementById('cppCrawlKeyword');
+            const cap = document.getElementById('cppCaptchaInput');
+            if (tId) tId.value = '';
+            if (kw) kw.value = '';
+            if (cap) cap.value = '';
+        }
+
         function closeCppCrawlerModal() {
             document.getElementById('cppCrawlerModal').classList.remove('active');
         }
@@ -2242,7 +2309,7 @@
             }
 
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/start', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/start`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ mode: mode })
@@ -2291,7 +2358,7 @@
             const keyword = document.getElementById('cppCrawlKeyword')?.value || '';
 
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2363,7 +2430,7 @@
         async function crawlCppPage(pageUrl, pageNum) {
             showToast(`Fetching CPPP Page ${pageNum}...`);
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/next_page', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/next_page`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2402,7 +2469,7 @@
             }
 
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/import_html', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/import_html`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ html_content: rawHtml })
@@ -2624,7 +2691,7 @@
         async function downloadCppDoc(tenderId, docType, docIndex) {
             showToast("Downloading document to downloads_cpp/ folder...");
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/download_document', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/download_document`, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({

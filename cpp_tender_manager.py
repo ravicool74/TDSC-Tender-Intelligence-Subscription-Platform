@@ -783,7 +783,7 @@ def init_cpp_session(mode: str = "active_tenders") -> dict:
     ctx = ssl._create_unverified_context()
 
     try:
-        with urllib.request.urlopen(req, context=ctx, timeout=25) as resp:
+        with urllib.request.urlopen(req, context=ctx, timeout=45) as resp:
             raw_cookies = resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]
             cookie_parts = []
             for c in raw_cookies:
