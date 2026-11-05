@@ -1930,6 +1930,32 @@
     <!-- SCRIPT CORE LOGIC: PRESERVED SEARCH + NEW SUBSCRIPTION PLATFORM -->
     <!-- ============================================================== -->
     <script>
+
+        // ==============================================================
+        // STRING ESCAPING & API BASE HELPERS
+        // ==============================================================
+        function escapeHtml(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function escapeJsString(str) {
+            if (str === null || str === undefined) return '';
+            return String(str).replace(/\/g, '\\').replace(/'/g, "\'");
+        }
+
+        function getCppApiBase() {
+            if (window.location.hostname.includes('github.io')) {
+                return 'https://tdsc-tender-intelligence-subscription.onrender.com';
+            }
+            return '';
+        }
+
         // State
         let allTenders = [];
         let biharTenders = [];
@@ -1956,40 +1982,72 @@
         let cppLastPagination = null;
         let currentViewingCppTender = null;
 
-        // View Switcher integration for CPPP
-        const origSwitchAppView = switchAppView;
-        switchAppView = function(viewId) {
-            origSwitchAppView(viewId);
-            if (viewId === 'cpp') {
-                const viewCpp = document.getElementById('viewCpp');
-                const navCpp = document.getElementById('navCpp');
-                if (viewCpp) viewCpp.classList.add('active');
-                if (navCpp) navCpp.classList.add('active');
-                loadCppTenders();
-            }
-        };
+// View Switcher handled in canonical switchAppView
 
-        // Load CPPP Tenders from Server
+        // Load CPPP Tenders from Server (with Cloud proxy & static fallback)
         async function loadCppTenders() {
-            try {
-                const resp = await fetch('/api/cpp/tenders?limit=150');
-                const data = await resp.json();
-                if (data.success) {
-                    cppTendersData = data.tenders || [];
-                    
-                    // Update stats
-                    const stats = data.stats || {};
-                    document.getElementById('statCppTotalCount').textContent = (stats.total_count || cppTendersData.length).toLocaleString();
-                    document.getElementById('statCppTotalPAC').textContent = `₹ ${(stats.total_value_cr || 0).toFixed(2)} Cr`;
-                    document.getElementById('statCppShortlistCount').textContent = (stats.shortlisted_count || 0).toLocaleString();
-                    document.getElementById('statCppDeptCount').textContent = (stats.unique_departments || 0).toLocaleString();
+            const apiBase = getCppApiBase();
+            let data = null;
 
-                    populateCppDropdowns();
-                    renderCppTenders(cppTendersData);
+            try {
+                const resp = await fetch(`${apiBase}/api/cpp/tenders?limit=150`);
+                if (resp.ok) {
+                    data = await resp.json();
                 }
             } catch (e) {
-                console.error("[CPP] Load error:", e);
+                console.warn("[CPP] Cloud/Local API fetch failed, trying static fallback:", e);
             }
+
+            // Fallback to static JSON file (especially on GitHub Pages)
+            if (!data || !data.success) {
+                try {
+                    const fallbackResp = await fetch('cpp_tenders_view.json');
+                    if (fallbackResp.ok) {
+                        const raw = await fallbackResp.json();
+                        const tList = raw.tenders || [];
+                        const totalVal = tList.reduce((acc, t) => acc + (t.tender_value_inr || 0), 0);
+                        const depts = new Set(tList.map(t => t.department).filter(Boolean));
+                        const slCount = tList.filter(t => t.is_shortlisted).length;
+                        data = {
+                            success: true,
+                            tenders: tList,
+                            stats: {
+                                total_count: tList.length,
+                                total_value_cr: roundVal(totalVal / 10000000.0, 2),
+                                shortlisted_count: slCount,
+                                unique_departments: depts.size
+                            }
+                        };
+                    }
+                } catch (e2) {
+                    console.error("[CPP] Static fallback also failed:", e2);
+                }
+            }
+
+            if (data && data.success) {
+                cppTendersData = data.tenders || [];
+                const stats = data.stats || {};
+                const totalPac = stats.total_value_cr !== undefined ? stats.total_value_cr : (cppTendersData.reduce((acc, t) => acc + (t.tender_value_inr || 0), 0) / 10000000.0);
+                
+                const statTot = document.getElementById('statCppTotalCount');
+                if (statTot) statTot.textContent = (stats.total_count || cppTendersData.length).toLocaleString();
+                
+                const statPac = document.getElementById('statCppTotalPAC');
+                if (statPac) statPac.textContent = `₹ ${Number(totalPac).toFixed(2)} Cr`;
+                
+                const statSl = document.getElementById('statCppShortlistCount');
+                if (statSl) statSl.textContent = (stats.shortlisted_count !== undefined ? stats.shortlisted_count : cppTendersData.filter(t => t.is_shortlisted).length).toLocaleString();
+                
+                const statDept = document.getElementById('statCppDeptCount');
+                if (statDept) statDept.textContent = (stats.unique_departments !== undefined ? stats.unique_departments : new Set(cppTendersData.map(t => t.department).filter(Boolean)).size).toLocaleString();
+
+                populateCppDropdowns();
+                renderCppTenders(cppTendersData);
+            }
+        }
+
+        function roundVal(num, decimals) {
+            return Number(Math.round(num + 'e' + decimals) + 'e-' + decimals);
         }
 
         // Populate Department and Location Dropdowns
@@ -2132,7 +2190,7 @@
         // Toggle CPPP Shortlist
         async function toggleCppShortlist(tenderId) {
             try {
-                const resp = await fetch('/api/cpp/toggle_shortlist', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/toggle_shortlist', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ tender_id: tenderId })
@@ -2184,7 +2242,7 @@
             }
 
             try {
-                const resp = await fetch('/api/cpp/session/start', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/start', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ mode: mode })
@@ -2233,7 +2291,7 @@
             const keyword = document.getElementById('cppCrawlKeyword')?.value || '';
 
             try {
-                const resp = await fetch('/api/cpp/session/submit_captcha', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2305,7 +2363,7 @@
         async function crawlCppPage(pageUrl, pageNum) {
             showToast(`Fetching CPPP Page ${pageNum}...`);
             try {
-                const resp = await fetch('/api/cpp/session/next_page', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/next_page', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2344,7 +2402,7 @@
             }
 
             try {
-                const resp = await fetch('/api/cpp/import_html', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/import_html', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({ html_content: rawHtml })
@@ -2366,7 +2424,7 @@
         // Open CPPP Deep Dive Detail Modal
         async function openCppTenderDetail(tenderId) {
             try {
-                const resp = await fetch(`/api/cpp/tender_detail?tender_id=${encodeURIComponent(tenderId)}`);
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/tender_detail?tender_id=${encodeURIComponent(tenderId)}`);
                 const res = await resp.json();
                 if (!res.success || !res.tender) {
                     showToast(res.error || "Tender details not found");
@@ -2566,7 +2624,7 @@
         async function downloadCppDoc(tenderId, docType, docIndex) {
             showToast("Downloading document to downloads_cpp/ folder...");
             try {
-                const resp = await fetch('/api/cpp/download_document', {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/download_document', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
@@ -2579,7 +2637,7 @@
                 const res = await resp.json();
                 if (res.success) {
                     showToast(`✅ Saved to ${res.local_path}`);
-                    window.open(`/api/cpp/downloaded_file?path=${encodeURIComponent(res.local_path)}`, '_blank');
+                    window.open(`${getCppApiBase()}/api/cpp/downloaded_file?path=${encodeURIComponent(res.local_path)}`, '_blank');
                     // Refresh modal
                     openCppTenderDetail(tenderId);
                 } else {
@@ -2619,6 +2677,10 @@ Shared via TDSC Tender Intelligence Platform`);
         }
 
         // Copy Text Summary for CPPP Tender
+        function downloadCppExcel() {
+            window.location.href = `${getCppApiBase()}/api/cpp/export_xlsx`;
+        }
+
         function copyCppTenderSummary(tenderId) {
             const t = cppTendersData.find(x => (x.tender_id || x.canonical_key) === tenderId);
             if (!t) return;
@@ -2646,6 +2708,12 @@ Closing Date: ${t.bid_closing_date}`;
             if (viewId === 'search') {
                 document.getElementById('viewSearch').classList.add('active');
                 document.getElementById('navSearch').classList.add('active');
+            } else if (viewId === 'cpp') {
+                const viewCpp = document.getElementById('viewCpp');
+                const navCpp = document.getElementById('navCpp');
+                if (viewCpp) viewCpp.classList.add('active');
+                if (navCpp) navCpp.classList.add('active');
+                loadCppTenders();
             } else if (viewId === 'plans') {
                 document.getElementById('viewPlans').classList.add('active');
                 document.getElementById('navPlans').classList.add('active');
