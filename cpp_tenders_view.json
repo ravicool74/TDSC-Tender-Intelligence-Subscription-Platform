@@ -1,6 +1,6 @@
 {
   "portal": "Central Public Procurement Portal (eprocure.gov.in)",
-  "updated_at": "2026-11-05T12:14:50.421405",
+  "updated_at": "2026-11-06T05:42:42.460769",
   "total_count": 10,
   "tenders": [
     {
@@ -200,7 +200,9 @@
         }
       ],
       "zip_download_url": "",
-      "is_shortlisted": false
+      "is_shortlisted": false,
+      "hasDownloaded": true,
+      "tenderFolder": "C:\\e-tender\\downloads_cpp\\tender_2026_MoRTH_933179_1"
     },
     {
       "s_no": "4.",

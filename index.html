@@ -2561,89 +2561,168 @@
 
         // Open CPPP Crawler & Captcha Modal
         function openCppCrawlerModal() {
-            document.getElementById('cppCrawlerModal').classList.add('active');
+            const modal = document.getElementById('cppCrawlerModal');
+            if (modal) modal.classList.add('active');
             reloadCppCaptcha();
         }
 
         function clearCppForm() {
-            document.getElementById('cppInputTenderId').value = '';
-            document.getElementById('cppInputTenderTitle').value = '';
-            document.getElementById('cppInputCaptcha').value = '';
-            const p1 = document.getElementById('cppSortP1');
-            if (p1) p1.checked = true;
-            const rAll = document.getElementById('cppPageRangeAll');
+            const tid = document.getElementById('cppCrawlTenderId') || document.getElementById('cppInputTenderId');
+            if (tid) tid.value = '';
+            const kw = document.getElementById('cppCrawlKeyword') || document.getElementById('cppInputTenderTitle');
+            if (kw) kw.value = '';
+            const cap = document.getElementById('cppCaptchaInput') || document.getElementById('cppInputCaptcha');
+            if (cap) cap.value = '';
+
+            const sort0 = document.querySelector('input[name="cppSortOption"][value="0"]') || document.querySelector('input[name="cppSortOption"][value="published"]');
+            if (sort0) sort0.checked = true;
+
+            const rAll = document.querySelector('input[name="cppCrawlPages"][value="all"]') || document.querySelector('input[name="cppPageRange"][value="all"]');
             if (rAll) rAll.checked = true;
-            document.getElementById('cppCrawlStatusBox').style.display = 'none';
+
+            const errBox = document.getElementById('cppCaptchaError');
+            if (errBox) errBox.style.display = 'none';
+
+            const feedback = document.getElementById('cppCrawlFeedback') || document.getElementById('cppCrawlStatusBox');
+            if (feedback) feedback.style.display = 'none';
         }
 
         function closeCppCrawlerModal() {
-            document.getElementById('cppCrawlerModal').classList.remove('active');
+            const modal = document.getElementById('cppCrawlerModal');
+            if (modal) modal.classList.remove('active');
         }
 
-        // Reload Captcha Image from Official CPPP Portal
+        // Reload Live Captcha Image from Official CPPP Portal
         async function reloadCppCaptcha() {
             const img = document.getElementById('cppCaptchaImg');
-            const statusMsg = document.getElementById('cppCrawlerStatusMsg');
-            img.style.opacity = '0.4';
-            statusMsg.textContent = "Connecting to official eprocure.gov.in session...";
+            const loadingSpan = document.getElementById('cppCaptchaLoading');
+            const errBox = document.getElementById('cppCaptchaError');
+            const captchaInput = document.getElementById('cppCaptchaInput') || document.getElementById('cppInputCaptcha');
+
+            if (errBox) errBox.style.display = 'none';
+            if (captchaInput) captchaInput.value = '';
+
+            if (img) {
+                img.style.display = 'none';
+                img.style.opacity = '0.4';
+            }
+            if (loadingSpan) {
+                loadingSpan.style.display = 'inline';
+                loadingSpan.textContent = "Connecting to eprocure.gov.in...";
+                loadingSpan.style.color = '#64748b';
+            }
+
+            const modeEl = document.querySelector('input[name="cppCrawlMode"]:checked');
+            const mode = modeEl ? modeEl.value : 'active_tenders';
 
             try {
-                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/start`, { method: 'POST' });
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/session/start`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: mode })
+                });
                 const res = await resp.json();
                 if (res.success) {
                     cppActiveSessionId = res.session_id;
-                    img.src = `data:image/jpeg;base64,${res.captcha_image_base64}`;
-                    img.style.opacity = '1';
-                    statusMsg.innerHTML = `Session active (ID: <code>${res.session_id.substring(0, 10)}...</code>). User must enter captcha manually.`;
+
+                    // Support data URI, raw base64, or direct captcha_image
+                    let imgSrc = res.captcha_image || '';
+                    if (!imgSrc && res.captcha_image_base64) {
+                        imgSrc = `data:image/png;base64,${res.captcha_image_base64}`;
+                    }
+
+                    if (img && imgSrc) {
+                        img.src = imgSrc;
+                        img.style.display = 'block';
+                        img.style.opacity = '1';
+                        if (loadingSpan) loadingSpan.style.display = 'none';
+                        if (captchaInput) {
+                            setTimeout(() => captchaInput.focus(), 100);
+                        }
+                    } else {
+                        if (loadingSpan) {
+                            loadingSpan.style.display = 'inline';
+                            loadingSpan.textContent = "Captcha not found in portal HTML. Click 🔄 Refresh.";
+                            loadingSpan.style.color = '#dc2626';
+                        }
+                    }
                 } else {
-                    statusMsg.innerHTML = `<span style="color: #dc2626;">Error: ${res.error || 'Failed to initialize session'}</span>`;
-                    img.style.opacity = '1';
+                    if (loadingSpan) {
+                        loadingSpan.style.display = 'inline';
+                        loadingSpan.textContent = res.error || "Failed to load captcha. Click 🔄 Refresh.";
+                        loadingSpan.style.color = '#dc2626';
+                    }
                 }
             } catch (e) {
-                statusMsg.innerHTML = `<span style="color: #dc2626;">Network error: ${e.message}</span>`;
-                img.style.opacity = '1';
+                if (loadingSpan) {
+                    loadingSpan.style.display = 'inline';
+                    loadingSpan.textContent = "Connection error. Click 🔄 Refresh.";
+                    loadingSpan.style.color = '#dc2626';
+                }
+                console.error("[CPP Captcha] Error:", e);
             }
         }
 
         // Submit Search Form & Captcha
         async function submitCppCaptchaSearch(e) {
-            e.preventDefault();
-            const captcha = (document.getElementById('cppInputCaptcha').value || '').trim();
+            if (e && e.preventDefault) e.preventDefault();
+
+            const captchaInput = document.getElementById('cppCaptchaInput') || document.getElementById('cppInputCaptcha');
+            const captcha = (captchaInput ? captchaInput.value : '').trim();
+
+            const errBox = document.getElementById('cppCaptchaError');
             if (!captcha) {
-                alert("Kripya CAPTCHA code enter karein jo image me dikh raha hai.");
+                if (errBox) {
+                    errBox.style.display = 'block';
+                    errBox.textContent = "Kripya Captcha code enter karein jo image me dikh raha hai.";
+                } else {
+                    alert("Kripya Captcha code enter karein jo image me dikh raha hai.");
+                }
+                if (captchaInput) captchaInput.focus();
                 return;
             }
 
-            const tid = (document.getElementById('cppInputTenderId').value || '').trim();
-            const title = (document.getElementById('cppInputTenderTitle').value || '').trim();
-            const sortEl = document.querySelector('input[name="cppSortOption"]:checked');
-            const sortOpt = sortEl ? sortEl.value : 'published';
+            if (errBox) errBox.style.display = 'none';
 
+            const tidEl = document.getElementById('cppCrawlTenderId') || document.getElementById('cppInputTenderId');
+            const tid = (tidEl ? tidEl.value : '').trim();
+
+            const kwEl = document.getElementById('cppCrawlKeyword') || document.getElementById('cppInputTenderTitle');
+            const title = (kwEl ? kwEl.value : '').trim();
+
+            const sortEl = document.querySelector('input[name="cppSortOption"]:checked');
+            const sortOpt = sortEl ? sortEl.value : '0';
+
+            const pagesEl = document.querySelector('input[name="cppCrawlPages"]:checked') || document.querySelector('input[name="cppPageRange"]:checked');
             let maxPages = 999;
-            const rangeEl = document.querySelector('input[name="cppPageRange"]:checked');
-            if (rangeEl) {
-                const val = rangeEl.value;
-                if (val === '1') maxPages = 1;
-                else if (val === '5') maxPages = 5;
-                else if (val === '10') maxPages = 10;
-                else if (val === 'all') maxPages = 999;
+            let crawlAll = true;
+            if (pagesEl) {
+                const val = pagesEl.value;
+                if (val === '1') { maxPages = 1; crawlAll = false; }
+                else if (val === '5') { maxPages = 5; crawlAll = false; }
+                else if (val === '10') { maxPages = 10; crawlAll = false; }
+                else if (val === '25') { maxPages = 25; crawlAll = false; }
+                else if (val === '50') { maxPages = 50; crawlAll = false; }
+                else if (val === 'all') { maxPages = 999; crawlAll = true; }
             }
 
-            const btn = document.getElementById('cppSubmitBtn');
-            const originalText = btn.innerHTML;
-            btn.disabled = true;
-            btn.innerHTML = `🚀 Crawling Central Tenders (Please wait)...`;
+            // Spinner & button state
+            const btn = document.getElementById('btnSubmitCppCrawl') || document.getElementById('cppSubmitBtn');
+            const spinner = document.getElementById('cppCrawlSpinner');
+            const btnText = document.getElementById('cppCrawlBtnText');
+            if (btn) btn.disabled = true;
+            if (spinner) spinner.style.display = 'inline';
+            if (btnText) btnText.textContent = "Crawling Central Tenders (Please wait)...";
 
-            const statusBox = document.getElementById('cppCrawlStatusBox');
-            statusBox.style.display = 'block';
-            statusBox.innerHTML = `
-                <div style="font-weight: 700; color: #1e3a8a; margin-bottom: 4px;">
-                    ⏳ Crawling eprocure.gov.in active search results...
-                </div>
-                <div style="font-size: 0.8rem; color: #475569;">
-                    User-controlled read-only crawl in progress. Rate-limited &amp; respecting server constraints.
-                </div>
-            `;
+            const feedback = document.getElementById('cppCrawlFeedback') || document.getElementById('cppCrawlStatusBox');
+            const feedbackMsg = document.getElementById('cppFeedbackMsg');
+            const feedbackStats = document.getElementById('cppFeedbackStats');
+
+            if (feedback) feedback.style.display = 'block';
+            if (feedbackMsg) feedbackMsg.innerHTML = "⏳ Crawling eprocure.gov.in active search results...";
+            if (feedbackStats) {
+                feedbackStats.innerHTML = "<span style='color: #475569;'>User-controlled read-only crawl in progress. Rate-limited &amp; respecting portal constraints...</span>";
+            }
 
             try {
                 const resp = await fetch(`${getCppApiBase()}/api/cpp/session/submit_captcha`, {
@@ -2655,45 +2734,70 @@
                         tender_id: tid,
                         tender_title: title,
                         sort_option: sortOpt,
-                        max_pages: maxPages
+                        max_pages: maxPages,
+                        crawl_all_pages: crawlAll
                     })
                 });
                 const res = await resp.json();
 
                 if (res.success) {
-                    statusBox.innerHTML = `
-                        <div style="font-weight: 700; color: #065f46; margin-bottom: 4px;">
-                            ✅ Successfully Crawled ${res.pages_crawled || 1} Page(s) up to the Last Page!
-                        </div>
-                        <div style="font-size: 0.82rem; color: #047857;">
-                            Found: <strong>${res.found_count}</strong> &nbsp;|&nbsp; 
-                            Added (New): <strong>+${res.added_count}</strong> &nbsp;|&nbsp; 
-                            Duplicates Skipped: <strong>${res.skipped_duplicates}</strong> &nbsp;|&nbsp; 
-                            Total in System: <strong>${res.total_in_store}</strong>
-                        </div>
-                    `;
-                    // Reload tenders list
+                    if (feedbackMsg) {
+                        feedbackMsg.innerHTML = `✅ Successfully Crawled ${res.pages_crawled || 1} Page(s) up to the Last Page!`;
+                    }
+                    if (feedbackStats) {
+                        feedbackStats.innerHTML = `
+                            <span>Found: <strong>${res.found_count || 0}</strong></span>
+                            <span>Added (New): <strong>+${res.added_count || 0}</strong></span>
+                            <span>Duplicates Skipped: <strong>${res.skipped_duplicates || 0}</strong></span>
+                            <span>Total in System: <strong>${res.total_in_store || 0}</strong></span>
+                        `;
+                    }
+                    showToast(`✅ Central CPPP: +${res.added_count || 0} new tenders imported!`);
                     await loadCppTenders();
-                    showToast(`✅ Central CPPP: ${res.added_count} new tenders imported!`);
+                    if (captchaInput) captchaInput.value = '';
+                } else if (res.captcha_error) {
+                    if (errBox) {
+                        errBox.style.display = 'block';
+                        errBox.textContent = res.error || "Invalid Captcha! Please enter the fresh letters shown in the image.";
+                    }
+                    if (feedback) feedback.style.display = 'none';
+
+                    // Update image if new captcha was returned
+                    const img = document.getElementById('cppCaptchaImg');
+                    const loadingSpan = document.getElementById('cppCaptchaLoading');
+                    let imgSrc = res.captcha_image || '';
+                    if (!imgSrc && res.captcha_image_base64) {
+                        imgSrc = `data:image/png;base64,${res.captcha_image_base64}`;
+                    }
+                    if (img && imgSrc) {
+                        img.src = imgSrc;
+                        img.style.display = 'block';
+                        img.style.opacity = '1';
+                        if (loadingSpan) loadingSpan.style.display = 'none';
+                    } else {
+                        reloadCppCaptcha();
+                    }
+
+                    if (captchaInput) {
+                        captchaInput.value = '';
+                        captchaInput.focus();
+                    }
                 } else {
-                    statusBox.innerHTML = `
-                        <div style="font-weight: 700; color: #991b1b; margin-bottom: 4px;">
-                            ❌ Crawl Stoppage / Error:
-                        </div>
-                        <div style="font-size: 0.82rem; color: #b91c1c;">
-                            ${escapeHtml(res.error || 'Unknown error occurred')}
-                        </div>
-                        <div style="font-size: 0.76rem; color: #64748b; margin-top: 6px;">
-                            (If Captcha was invalid or session expired, click 'Refresh Captcha' and try again)
-                        </div>
-                    `;
+                    if (feedbackMsg) feedbackMsg.innerHTML = `❌ Crawl Stoppage / Notice:`;
+                    if (feedbackStats) {
+                        feedbackStats.innerHTML = `<span style='color: #dc2626;'>${escapeHtml(res.error || 'Unknown error occurred')}</span>`;
+                    }
                     reloadCppCaptcha();
                 }
             } catch (err) {
-                statusBox.innerHTML = `<span style="color: #dc2626;">Network/Server error: ${escapeHtml(err.message)}</span>`;
+                if (feedbackMsg) feedbackMsg.innerHTML = `❌ Network/Server Error:`;
+                if (feedbackStats) {
+                    feedbackStats.innerHTML = `<span style='color: #dc2626;'>${escapeHtml(err.message)}</span>`;
+                }
             } finally {
-                btn.disabled = false;
-                btn.innerHTML = originalText;
+                if (btn) btn.disabled = false;
+                if (spinner) spinner.style.display = 'none';
+                if (btnText) btnText.textContent = "Search";
             }
         }
 

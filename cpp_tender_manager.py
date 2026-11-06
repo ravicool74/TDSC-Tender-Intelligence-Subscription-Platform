@@ -840,6 +840,10 @@ def init_cpp_session(mode: str = "active_tenders") -> dict:
                     captcha_image = src
                     break
 
+            b64_part = ""
+            if "base64," in captcha_image:
+                b64_part = captcha_image.split("base64,")[1].strip()
+
             session_id = str(uuid.uuid4())
             ACTIVE_CPP_SESSIONS[session_id] = {
                 "cookie": cookie_header,
@@ -855,6 +859,7 @@ def init_cpp_session(mode: str = "active_tenders") -> dict:
                 "success": True,
                 "session_id": session_id,
                 "captcha_image": captcha_image,
+                "captcha_image_base64": b64_part,
                 "mode": mode,
                 "message": "Session initialized. Please solve the CAPTCHA image and submit."
             }
@@ -932,11 +937,16 @@ def submit_cpp_search_and_crawl(
                             new_captcha = src
                             break
 
+                img_url = new_captcha or session.get("captcha_image", "")
+                b64_err = ""
+                if "base64," in img_url:
+                    b64_err = img_url.split("base64,")[1].strip()
                 return {
                     "success": False,
                     "captcha_error": True,
                     "error": "Invalid Captcha! Please enter the fresh letters shown in the image.",
-                    "captcha_image": new_captcha or session.get("captcha_image")
+                    "captcha_image": img_url,
+                    "captcha_image_base64": b64_err
                 }
 
             # Parse search results for Page 1
