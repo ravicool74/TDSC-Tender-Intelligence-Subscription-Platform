@@ -2070,7 +2070,7 @@
                         <div style="display: grid; grid-template-columns: 180px 1fr; align-items: center; gap: 10px; margin-bottom: 10px; padding: 12px 0; border-top: 1px dashed #cbd5e1; border-bottom: 1px dashed #cbd5e1;">
                             <label style="font-size: 0.86rem; font-weight: 800; color: #b91c1c; text-align: right;">Enter Captcha <span style="color:red;">*</span></label>
                             <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
-                                <input type="text" id="cppCaptchaInput" class="form-control" style="width: 170px; height: 38px; font-size: 1.15rem; font-weight: 800; letter-spacing: 2px; border: 2px solid #005a9c;" placeholder="Enter Captcha" autocomplete="off" onkeydown="if(event.key==='Enter') submitCppCaptchaSearch()">
+                                <input type="text" id="cppCaptchaInput" class="form-control" style="width: 170px; height: 38px; font-size: 1.15rem; font-weight: 800; letter-spacing: 2px; border: 2px solid #005a9c; font-family: monospace;" placeholder="Enter Captcha" autocomplete="off" autocapitalize="none" spellcheck="false" onkeydown="if(event.key==='Enter') submitCppCaptchaSearch()">
                                 
                                 <!-- Live Portal Captcha Image -->
                                 <div id="cppCaptchaContainer" style="background: white; border: 1.5px solid #005a9c; border-radius: 4px; padding: 4px 8px; min-width: 130px; min-height: 42px; display: inline-flex; align-items: center; justify-content: center;">
@@ -2923,7 +2923,7 @@
                             <img id="cppDetailCaptchaImg" src="" style="display: none; height: 34px;" alt="Captcha" />
                         </div>
                         <button type="button" class="btn-top" onclick="loadCppDetailModalCaptcha()" style="padding: 5px 8px; font-size: 0.74rem;">🔄</button>
-                        <input type="text" id="cppDetailCaptchaInput" placeholder="Captcha" style="width: 110px; height: 36px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: monospace; border: 1.5px solid #0284c7; border-radius: 4px; padding: 0 8px;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(tenderId)}')" />
+                        <input type="text" id="cppDetailCaptchaInput" placeholder="Captcha (Case-Sensitive)" autocomplete="off" autocapitalize="none" spellcheck="false" style="width: 150px; height: 36px; font-weight: 700; letter-spacing: 2px; font-family: monospace; border: 1.5px solid #0284c7; border-radius: 4px; padding: 0 8px;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(tenderId)}')" />
                         <button type="button" class="btn-top" onclick="executeCppDetailCaptchaSync('${escapeJsString(tenderId)}')" style="background: #0284c7; color: white; border: none; height: 36px; padding: 0 12px; font-weight: 700; border-radius: 4px;">
                             Sync Now
                         </button>
@@ -3084,7 +3084,7 @@
                                 <div style="font-size: 0.76rem; color: #64748b;">Tender ID: <strong style="font-family: monospace; color: #1e3a8a;">${escapeHtml(cleanTid)}</strong></div>
                             </div>
                             <div style="font-size: 0.82rem; color: #334155; margin-bottom: 10px; line-height: 1.45;">
-                                Portal se 100% full tender details (Fee, EMD, work details, dates) aur official NIT &amp; BOQ notices khinch kar <strong>downloads_cpp/</strong> folder me save karne ke liye portal Captcha solve karein:
+                                Portal se 100% full tender details (Fee, EMD, work details, dates) aur official NIT &amp; BOQ notices khinch kar <strong>downloads_cpp/</strong> folder me save karne ke liye portal Captcha solve karein <em style="color:#0369a1;">(<strong>Case-Sensitive:</strong> Small aur Capital letters jaisa image me dikh raha hai waisa hi type karein)</em>:
                             </div>
 
                             <!-- Live Captcha Row -->
@@ -3097,7 +3097,7 @@
                                     🔄 Refresh
                                 </button>
                                 <div style="flex: 1; min-width: 140px;">
-                                    <input type="text" id="cppDetailCaptchaInput" placeholder="Enter Captcha (e.g. 5K9TY)" style="width: 100%; height: 38px; font-size: 1.05rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0 10px; font-family: monospace;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(cleanTid)}')" />
+                                    <input type="text" id="cppDetailCaptchaInput" placeholder="Enter Captcha (Case-Sensitive, e.g. kNN1C)" autocomplete="off" autocapitalize="none" spellcheck="false" style="width: 100%; height: 38px; font-size: 1.05rem; font-weight: 700; letter-spacing: 2px; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0 10px; font-family: monospace;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(cleanTid)}')" />
                                 </div>
                                 <button type="button" class="btn-top" onclick="executeCppDetailCaptchaSync('${escapeJsString(cleanTid)}')" id="btnCppDetailSyncSubmit" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; height: 38px; padding: 0 18px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
                                     <span>🚀 Capture Full Details &amp; Download Files</span>
