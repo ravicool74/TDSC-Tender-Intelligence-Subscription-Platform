@@ -1,39 +1,27 @@
 {
   "portal": "Central Public Procurement Portal (eprocure.gov.in)",
-  "updated_at": "2026-11-06T07:04:43.058085",
+  "updated_at": "2026-11-06T09:46:20.796234",
   "total_count": 2631,
   "tenders": [
     {
-      "s_no": "1.",
+      "s_no": "921.",
       "canonical_key": "2023_MoRTH_771865_1",
       "tender_id": "2023_MoRTH_771865_1",
-      "system_tender_no": "2023_MoRTH_771865_1",
       "tender_ref_no": "RW/PAT/NH133E/Bhaglpur73/22-23",
-      "title": "Construction of Four Lane with paved shoulder of Bhagalpur Kharhara Village (Dhaka More) from Km 0.000 to KM 36.600 (Total length 36.600 Km) of NH-133E on EPC mode",
+      "title": "Construction of Four Lane with paved shoulder of Bhagalpur Kharhara Village (Dhaka More) from Km 0.000 to KM 36.600 (Total length 36.600 Km) of NH-133E in the State of Bihar on EPC mode",
       "work_description": "Construction of Four Lane with paved shoulder of Bhagalpur Kharhara Village (Dhaka More) from Km 0.000 to KM 36.600 (Total length 36.600 Km) of NH-133E in the State of Bihar on EPC mode",
-      "organisation_chain": "Ministry of Road Transport and Highways||P1 Delhi - MoRTH||RO Patna - MoRTH",
+      "organisation_chain": "Ministry of Road Transport and Highways",
       "department": "Ministry of Road Transport and Highways",
-      "state_district": "Bihar / Patna",
+      "state_district": "Bihar",
       "tender_value_inr": 7637200000.0,
       "tender_value_formatted": "₹ 7,637,200,000.00",
       "budget_slab": "Above5Cr",
       "contract_type": "Tender",
       "published_date": "15-Sep-2023 05:00 PM",
-      "bid_submission_start_date": "23-Oct-2023 11:00 AM",
-      "bid_closing_date": "30-Nov-2026 04:00 PM",
+      "bid_closing_date": "31-Dec-2026 02:00 PM",
       "bid_submission_end_date": "30-Nov-2026 04:00 PM",
       "bid_opening_date": "01-Dec-2026 11:00 AM",
-      "tender_fee_inr": 80000.0,
-      "tender_fee_formatted": "₹ 80,000.00",
-      "fee_payable_to": "RPAO(NH) MoRTH",
-      "fee_payable_at": "Patna",
-      "fee_exemption_allowed": "No",
-      "emd_amount_inr": 76500000.0,
-      "emd_amount_formatted": "₹ 76,500,000.00",
-      "emd_payable_to": "RPAO(NH) MoRTH",
-      "emd_payable_at": "Patna",
-      "emd_fee_type": "fixed",
-      "emd_exemption_allowed": "No",
+      "detail_url": "https://eprocure.gov.in/eprocure/app?component=%24DirectLink&page=FrontEndLatestActiveTenders&service=direct&session=T&sp=SCLUXcCdH%2BzQDSdMcwPsWcA%3D%3D",
       "instruments": [
         {
           "s_no": "1",
@@ -48,37 +36,138 @@
           "instrument_type": "Bank Guarantee"
         },
         {
-          "s_no": "4",
-          "instrument_type": "RTGS / NEFT"
+          "s_no": "1",
+          "instrument_type": "Fee/PreQual/Technical"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Finance"
+        },
+        {
+          "s_no": "1",
+          "instrument_type": "Tendernotice_1.pdf"
+        },
+        {
+          "s_no": "1",
+          "instrument_type": "Tender Documents"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "BOQ"
+        },
+        {
+          "s_no": "3",
+          "instrument_type": "Tender Documents"
+        },
+        {
+          "s_no": "1",
+          "instrument_type": "Corrigendum XXXXIV"
+        },
+        {
+          "s_no": "2",
+          "instrument_type": "Corrigendum XXIV"
         }
       ],
       "documents": [
         {
           "s_no": "1",
-          "name": "Tendernotice_1.pdf",
-          "description": "Official NIT Notice",
-          "size_kb": "163.34",
-          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+          "name": "Fee/PreQual/Technical",
+          "description": "Technical Documents 1",
+          "size_kb": ".pdf",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
         },
         {
           "s_no": "2",
-          "name": "BOQ_811387.xls",
-          "description": "Bill of Quantities (BOQ)",
-          "size_kb": "285.50",
-          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+          "name": "Finance",
+          "description": "Financial Proposal/BoQ",
+          "size_kb": ".xls",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
+        },
+        {
+          "s_no": "1",
+          "name": "Tendernotice_1.pdf",
+          "description": "NIT",
+          "size_kb": "163.34",
+          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownoad&page=FrontEndTenderDetails&service=direct&session=T",
+          "local_path": "downloads_cpp/tender_2023_MoRTH_771865_1/Tendernotice_1.pdf",
+          "downloaded": true,
+          "size_bytes": 33062
+        },
+        {
+          "s_no": "1",
+          "name": "Tender Documents",
+          "description": "EPC.pdf",
+          "size_kb": "EPC Document",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
+        },
+        {
+          "s_no": "2",
+          "name": "BOQ",
+          "description": "BOQ_811387.xls",
+          "size_kb": "Financial Proposal/ BoQ",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
         },
         {
           "s_no": "3",
-          "name": "EPC_Agreement.pdf",
-          "description": "EPC Agreement & Conditions",
-          "size_kb": "1420.00",
-          "download_url": "https://eprocure.gov.in/eprocure/app?component=docDownload&page=FrontEndTenderDetails"
+          "name": "Tender Documents",
+          "description": "RFP.pdf",
+          "size_kb": "RFP",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
+        },
+        {
+          "s_no": "1",
+          "name": "Corrigendum XXXXIV",
+          "description": "Date",
+          "size_kb": "",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
+        },
+        {
+          "s_no": "2",
+          "name": "Corrigendum XXIV",
+          "description": "Other",
+          "size_kb": "",
+          "download_url": "",
+          "local_path": "",
+          "downloaded": false
         }
       ],
-      "zip_download_url": "https://eprocure.gov.in/eprocure/app?component=zipDownload&page=FrontEndTenderDetails",
+      "zip_download_url": "",
       "is_shortlisted": false,
+      "extracted_at": "2026-11-06T06:03:48.514446",
+      "source_portal": "eprocure.gov.in",
+      "tender_fee_inr": 80000.0,
+      "tender_fee_formatted": "₹ 80,000.00",
+      "fee_payable_to": "RPAO(NH) MoRTH",
+      "fee_payable_at": "Patna",
+      "fee_exemption_allowed": "No",
+      "emd_amount_inr": 76500000.0,
+      "emd_amount_formatted": "₹ 76,500,000.00",
+      "emd_exemption_allowed": "No",
+      "emd_fee_type": "fixed",
+      "emd_percentage": "NA",
+      "emd_payable_to": "RPAO(NH) MoRTH",
+      "emd_payable_at": "Patna",
+      "doc_download_start_date": "15-Sep-2023 05:00 PM",
+      "doc_download_end_date": "30-Nov-2026 04:00 PM",
+      "clarification_start_date": "NA",
+      "clarification_end_date": "NA",
+      "bid_submission_start_date": "23-Oct-2023 11:00 AM",
+      "zip_local_path": "",
       "hasDownloaded": true,
-      "tenderFolder": "C:\\e-tender\\downloads_cpp\\tender_2023_MoRTH_771865_1"
+      "tenderFolder": "C:\\e-tender\\downloads_cpp\\tender_2023_MoRTH_771865_1",
+      "last_live_checked": "06-11-2026 07:30 AM"
     },
     {
       "s_no": "2.",

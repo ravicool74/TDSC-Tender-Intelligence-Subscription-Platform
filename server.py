@@ -1906,7 +1906,7 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 return
 
             res = download_cpp_document(tender_id, doc_type=doc_type, doc_index=doc_index, session_id=session_id)
-            self.send_json(res, status=200 if res.get('success') else 500)
+            self.send_json(res, status=200)
             return
 
         # 25. CPP Dedicated Single-Tender Live Refresh (with Captcha Sync Support)
@@ -1938,7 +1938,7 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 res = sync_cpp_tender_with_captcha(session_id, captcha_text, str(tender_id))
             else:
                 res = download_all_cpp_tender_attachments(str(tender_id))
-            self.send_json(res, status=200 if res.get('success') else 500)
+            self.send_json(res, status=200)
             return
 
         # 26b. CPP Sync With Captcha Direct Route
