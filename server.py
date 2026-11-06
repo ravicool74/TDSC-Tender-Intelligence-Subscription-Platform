@@ -749,10 +749,14 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                     page = max(1, int(query.get('page', ['1'])[0]))
                 except ValueError:
                     page = 1
-                try:
-                    limit = max(1, min(5000, int(query.get('limit', ['1000'])[0])))
-                except ValueError:
-                    limit = 1000
+                q_limit_raw = query.get('limit', ['all'])[0].strip().lower()
+                if q_limit_raw in ['all', '0', '-1', 'none', '']:
+                    limit = len(all_tenders) + 50000
+                else:
+                    try:
+                        limit = max(1, int(q_limit_raw))
+                    except ValueError:
+                        limit = len(all_tenders) + 50000
 
                 filtered = []
                 total_val_sum = 0.0

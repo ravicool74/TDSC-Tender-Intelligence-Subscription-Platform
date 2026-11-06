@@ -2239,7 +2239,7 @@
             let data = null;
 
             try {
-                const resp = await fetch(`${apiBase}/api/cpp/tenders?limit=1000`);
+                const resp = await fetch(`${apiBase}/api/cpp/tenders?limit=all`);
                 if (resp.ok) {
                     data = await resp.json();
                 }
