@@ -408,7 +408,9 @@ def parse_cpp_search_results_page(html_content: str, base_url: str = "https://ep
         raw_org = get_val('org_chain')
         raw_val = get_val('tender_value')
 
-        if not raw_title_ref and not raw_org and not raw_close:
+        if not raw_title_ref and not raw_org:
+            continue
+        if not raw_title_ref:
             continue
 
         # Extract link to detail page
@@ -1227,7 +1229,7 @@ def download_cpp_document(tender_id: str, doc_type: str = "nit", doc_index: int 
 # 5. DEDICATED EXCEL EXPORT WORKBOOK GENERATOR
 # =========================================================================
 
-def generate_cpp_excel_workbook(tenders: list = None) -> str:
+def generate_cpp_excel_workbook(tenders=None) -> str:
     """
     Generates CPP_Central_Gov_Tenders_Comprehensive.xlsx with 4 styled sheets:
     1. CPP Main Tenders
@@ -1238,6 +1240,8 @@ def generate_cpp_excel_workbook(tenders: list = None) -> str:
     if tenders is None:
         store = load_cpp_tenders_store()
         tenders = store.get("tenders", [])
+    elif isinstance(tenders, dict):
+        tenders = tenders.get("tenders", [])
 
     wb = openpyxl.Workbook()
     
@@ -1520,10 +1524,240 @@ def sync_cpp_single_tender_live(tender_id: str) -> dict:
         "message": f"Central Tender #{tender_id} successfully verified with eprocure.gov.in live!" + (f" ({', '.join(changes_detected)})" if changes_detected else " (Data is current, no changes on portal)")
     }
 
+def sync_cpp_tender_with_captcha(session_id: str, captcha_text: str, tender_id: str) -> dict:
+    """
+    Submits user's CAPTCHA to eprocure.gov.in, searches for the specific Central tender,
+    retrieves its live detail page, parses all fee/EMD/work/dates/docs details,
+    downloads all official documents and ZIP to downloads_cpp/tender_<clean_tid>/,
+    and updates cpp_tenders_view.json and the Excel export.
+    """
+    session = ACTIVE_CPP_SESSIONS.get(session_id)
+    if not session:
+        return {"success": False, "error": "Captcha session expired. Kripya Captcha Refresh karein."}
+
+    store = load_cpp_tenders_store()
+    tenders = store.get("tenders", [])
+    target = None
+    tid_lower = str(tender_id).strip().lower()
+
+    for t in tenders:
+        if str(t.get("tender_id", "")).strip().lower() == tid_lower or str(t.get("canonical_key", "")).strip().lower() == tid_lower:
+            target = t
+            break
+
+    if not target:
+        return {"success": False, "error": f"Tender ID '{tender_id}' not found in database."}
+
+    cookie = session["cookie"]
+    form_fields = session["form_fields"].copy()
+    form_action = session["form_action"]
+
+    # Fill form fields
+    form_fields['captchaText'] = captcha_text.strip()
+    form_fields['Submit'] = 'Search'
+
+    target_tid = target.get("tender_id", "")
+    target_title = target.get("title", "")
+    target_ref = target.get("tender_ref_no", "")
+
+    # If target has a valid tender ID
+    if target_tid and not (len(target_tid) == 36 and '-' in target_tid):
+        form_fields['TenderId'] = target_tid
+    elif target_ref:
+        form_fields['TenderTitle'] = target_ref
+    elif target_title:
+        form_fields['TenderTitle'] = re.sub(r'[^a-zA-Z0-9\s]', '', target_title)[:30].strip()
+
+    post_data = urllib.parse.urlencode(form_fields).encode('utf-8')
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': cookie,
+        'Referer': session.get("target_url", "https://eprocure.gov.in/eprocure/app")
+    }
+
+    ctx = ssl._create_unverified_context()
+    req = urllib.request.Request(form_action, data=post_data, headers=headers)
+
+    try:
+        with urllib.request.urlopen(req, context=ctx, timeout=35) as resp:
+            new_cookies = (resp.headers.get_all('Set-Cookie') if hasattr(resp.headers, 'get_all') else [resp.headers.get('Set-Cookie')]) or []
+            for c in new_cookies:
+                if c and 'JSESSIONID' in c:
+                    cookie = c.split(';')[0].strip()
+                    session["cookie"] = cookie
+                    headers['Cookie'] = cookie
+
+            html = resp.read().decode('utf-8', errors='ignore')
+
+            # Check if captcha failed
+            if "Invalid Captcha" in html or "Please Enter Correct Captcha" in html:
+                soup = BeautifulSoup(html, 'html.parser')
+                form = soup.find('form')
+                new_captcha = ""
+                if form:
+                    for inp in form.find_all('input'):
+                        n = inp.get('name')
+                        if n:
+                            session["form_fields"][n] = inp.get('value', '')
+                    for img in form.find_all('img'):
+                        src = img.get('src', '')
+                        if 'data:image' in src or 'captcha' in src.lower():
+                            new_captcha = src
+                            break
+
+                img_url = new_captcha or session.get("captcha_image", "")
+                b64_err = ""
+                if "base64," in img_url:
+                    b64_err = img_url.split("base64,")[1].strip()
+                return {
+                    "success": False,
+                    "captcha_error": True,
+                    "error": "Invalid Captcha! Please enter the fresh letters shown in the image.",
+                    "captcha_image": img_url,
+                    "captcha_image_base64": b64_err,
+                    "session_id": session_id
+                }
+
+            # Authenticated successfully!
+            session["authenticated"] = True
+            session["last_used"] = time.time()
+
+            # Parse search results
+            parsed_res = parse_cpp_search_results_page(html, base_url='https://eprocure.gov.in/eprocure/app')
+            tenders_found = parsed_res.get("tenders", [])
+
+            live_detail_url = ""
+            for tf in tenders_found:
+                if target_tid and target_tid.lower() in str(tf.get("tender_id", "")).lower():
+                    live_detail_url = tf.get("detail_url")
+                    break
+                if target_title and target_title[:20].lower() in str(tf.get("title", "")).lower():
+                    live_detail_url = tf.get("detail_url")
+                    break
+
+            if not live_detail_url and tenders_found:
+                live_detail_url = tenders_found[0].get("detail_url")
+
+            # Fallback to existing detail_url if search didn't yield a direct link
+            if not live_detail_url:
+                live_detail_url = target.get("detail_url", "")
+
+            # If we have a detail URL, fetch and parse FrontEndTenderDetails
+            if live_detail_url:
+                try:
+                    det_req = urllib.request.Request(live_detail_url, headers={
+                        'User-Agent': headers['User-Agent'],
+                        'Cookie': cookie,
+                        'Referer': session.get("target_url", "https://eprocure.gov.in/eprocure/app")
+                    })
+                    with urllib.request.urlopen(det_req, context=ctx, timeout=35) as det_resp:
+                        d_cookies = (det_resp.headers.get_all('Set-Cookie') if hasattr(det_resp.headers, 'get_all') else [det_resp.headers.get('Set-Cookie')]) or []
+                        for dc in d_cookies:
+                            if dc and 'JSESSIONID' in dc:
+                                cookie = dc.split(';')[0].strip()
+                                session["cookie"] = cookie
+                                headers['Cookie'] = cookie
+
+                        det_html = det_resp.read().decode('utf-8', errors='ignore')
+                        details = parse_cpp_tender_detail_page(det_html, base_url='https://eprocure.gov.in/eprocure/app')
+                        if details and isinstance(details, dict):
+                            target.update(details)
+                            target["detail_url"] = live_detail_url
+                except Exception as e_det:
+                    print(f"[CPP] Live detail fetch note: {e_det}")
+
+            # Now automatically download attachments to downloads_cpp/tender_<clean_tid>/
+            clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', target.get("tender_id", tender_id))
+            tender_folder = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}")
+            os.makedirs(tender_folder, exist_ok=True)
+
+            downloaded_files = []
+
+            # 1. NIT Documents
+            for idx, doc in enumerate(target.get("documents", [])):
+                doc_url = doc.get("download_url")
+                if doc_url:
+                    try:
+                        fn = doc.get("name") or f"Tendernotice_{idx+1}.pdf"
+                        safe_fn = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', fn)
+                        dest = os.path.join(tender_folder, safe_fn)
+                        doc_req = urllib.request.Request(doc_url, headers={
+                            'User-Agent': headers['User-Agent'],
+                            'Cookie': cookie,
+                            'Referer': live_detail_url or session.get("target_url", "https://eprocure.gov.in/eprocure/app")
+                        })
+                        with urllib.request.urlopen(doc_req, context=ctx, timeout=45) as doc_resp:
+                            content = doc_resp.read()
+                            if len(content) > 100:
+                                with open(dest, 'wb') as df:
+                                    df.write(content)
+                                rel_path = os.path.relpath(dest, DIRECTORY).replace('\\', '/')
+                                doc["local_path"] = rel_path
+                                doc["downloaded"] = True
+                                doc["size_bytes"] = len(content)
+                                downloaded_files.append({"name": safe_fn, "path": rel_path, "size_bytes": len(content)})
+                    except Exception as e_doc:
+                        print(f"[CPP] Doc download note for {doc.get('name')}: {e_doc}")
+
+            # 2. Complete ZIP file
+            if target.get("zip_download_url"):
+                try:
+                    zip_url = target.get("zip_download_url")
+                    zip_fn = f"{clean_tid}_all_documents.zip"
+                    zip_dest = os.path.join(tender_folder, zip_fn)
+                    zip_req = urllib.request.Request(zip_url, headers={
+                        'User-Agent': headers['User-Agent'],
+                        'Cookie': cookie,
+                        'Referer': live_detail_url or session.get("target_url", "https://eprocure.gov.in/eprocure/app")
+                    })
+                    with urllib.request.urlopen(zip_req, context=ctx, timeout=60) as zip_resp:
+                        zip_bytes = zip_resp.read()
+                        if len(zip_bytes) > 200:
+                            with open(zip_dest, 'wb') as zf:
+                                zf.write(zip_bytes)
+                            rel_zip = os.path.relpath(zip_dest, DIRECTORY).replace('\\', '/')
+                            target["zip_local_path"] = rel_zip
+                            downloaded_files.append({"name": zip_fn, "path": rel_zip, "size_bytes": len(zip_bytes)})
+                except Exception as e_zip:
+                    print(f"[CPP] ZIP download note: {e_zip}")
+
+            # Also check existing files in folder if any were downloaded earlier
+            disk_files = [f for f in os.listdir(tender_folder) if os.path.isfile(os.path.join(tender_folder, f)) and os.path.getsize(os.path.join(tender_folder, f)) > 0]
+            for df_name in disk_files:
+                if not any(x['name'] == df_name for x in downloaded_files):
+                    p = os.path.relpath(os.path.join(tender_folder, df_name), DIRECTORY).replace('\\', '/')
+                    downloaded_files.append({"name": df_name, "path": p, "size_bytes": os.path.getsize(os.path.join(tender_folder, df_name))})
+
+            target["hasDownloaded"] = len(downloaded_files) > 0
+            target["tenderFolder"] = tender_folder
+            target["last_live_checked"] = datetime.now().strftime("%d-%m-%Y %I:%M %p")
+
+            # Persist changes
+            save_cpp_tenders_batch([target], allow_update=True)
+            try:
+                generate_cpp_excel_workbook(store.get("tenders", []))
+            except Exception as e_xl:
+                print(f"[CPP] Excel update note: {e_xl}")
+
+            return {
+                "success": True,
+                "tender": target,
+                "downloaded_files": downloaded_files,
+                "downloaded_count": len(downloaded_files),
+                "folder": tender_folder,
+                "message": f"Central Tender #{tender_id} complete details synced and {len(downloaded_files)} file(s) saved to downloads_cpp/tender_{clean_tid}/"
+            }
+
+    except Exception as e:
+        return {"success": False, "error": f"Error syncing tender with portal: {str(e)}"}
+
+
 def download_all_cpp_tender_attachments(tender_id: str) -> dict:
     """
     Downloads all available NIT notices and ZIP file for a Central CPPP tender
     to downloads_cpp/tender_<clean_tid>/.
+    If already downloaded to folder, returns existing files.
     """
     store = load_cpp_tenders_store()
     tenders = store.get("tenders", [])
@@ -1538,42 +1772,90 @@ def download_all_cpp_tender_attachments(tender_id: str) -> dict:
     if not target:
         return {"success": False, "error": f"Tender '{tender_id}' not found"}
 
-    # Enrich first if documents not yet present
-    if target.get("detail_url") and not target.get("documents"):
-        try:
-            enriched = enrich_cpp_tender_detail(target)
-            if enriched:
-                target.update(enriched)
-                save_cpp_tenders_batch([target], allow_update=True)
-        except Exception:
-            pass
-
     clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', target.get("tender_id", tender_id))
     tender_folder = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}")
     os.makedirs(tender_folder, exist_ok=True)
 
-    downloaded = []
-    # 1. Download NIT Documents
-    docs = target.get("documents", [])
-    for idx, doc in enumerate(docs):
-        res = download_cpp_document(tender_id, doc_type="nit", doc_index=idx)
-        if res.get("success"):
-            downloaded.append(res.get("filename"))
+    # Check if files already exist on disk
+    disk_files = [f for f in os.listdir(tender_folder) if os.path.isfile(os.path.join(tender_folder, f)) and os.path.getsize(os.path.join(tender_folder, f)) > 0]
+    if disk_files:
+        target["hasDownloaded"] = True
+        target["tenderFolder"] = tender_folder
+        save_cpp_tenders_batch([target], allow_update=True)
+        return {
+            "success": True,
+            "already_downloaded": True,
+            "downloadedCount": len(disk_files),
+            "files": disk_files,
+            "folder": tender_folder,
+            "tender": target,
+            "message": f"{len(disk_files)} file(s) already downloaded in folder tender_{clean_tid}"
+        }
 
-    # 2. Download ZIP if available
-    if target.get("zip_download_url"):
-        res_zip = download_cpp_document(tender_id, doc_type="zip")
-        if res_zip.get("success"):
-            downloaded.append(res_zip.get("filename"))
+    # If documents exist with live links and there is an active session in ACTIVE_CPP_SESSIONS
+    active_sess = None
+    for sid, sdata in ACTIVE_CPP_SESSIONS.items():
+        if sdata.get("authenticated") and (time.time() - sdata.get("last_used", 0) < 900):
+            active_sess = sdata
+            break
 
-    target["hasDownloaded"] = len(downloaded) > 0
-    target["tenderFolder"] = tender_folder
-    save_cpp_tenders_batch([target], allow_update=True)
+    if active_sess:
+        # Download using active session
+        downloaded = []
+        cookie = active_sess.get("cookie", "")
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36', 'Cookie': cookie}
+        ctx = ssl._create_unverified_context()
+
+        for idx, doc in enumerate(target.get("documents", [])):
+            doc_url = doc.get("download_url")
+            if doc_url:
+                try:
+                    fn = doc.get("name") or f"Tendernotice_{idx+1}.pdf"
+                    safe_fn = re.sub(r'[^a-zA-Z0-9_\-\.]', '_', fn)
+                    dest = os.path.join(tender_folder, safe_fn)
+                    req = urllib.request.Request(doc_url, headers=headers)
+                    with urllib.request.urlopen(req, context=ctx, timeout=40) as resp:
+                        c = resp.read()
+                        if len(c) > 100:
+                            with open(dest, 'wb') as f:
+                                f.write(c)
+                            downloaded.append(safe_fn)
+                            doc["local_path"] = os.path.relpath(dest, DIRECTORY).replace('\\', '/')
+                            doc["downloaded"] = True
+                except Exception:
+                    pass
+
+        if target.get("zip_download_url"):
+            try:
+                zip_url = target.get("zip_download_url")
+                zip_fn = f"{clean_tid}_all_documents.zip"
+                zip_dest = os.path.join(tender_folder, zip_fn)
+                req = urllib.request.Request(zip_url, headers=headers)
+                with urllib.request.urlopen(req, context=ctx, timeout=60) as resp:
+                    c = resp.read()
+                    if len(c) > 200:
+                        with open(zip_dest, 'wb') as f:
+                            f.write(c)
+                        downloaded.append(zip_fn)
+                        target["zip_local_path"] = os.path.relpath(zip_dest, DIRECTORY).replace('\\', '/')
+            except Exception:
+                pass
+
+        if downloaded:
+            target["hasDownloaded"] = True
+            target["tenderFolder"] = tender_folder
+            save_cpp_tenders_batch([target], allow_update=True)
+            return {
+                "success": True,
+                "downloadedCount": len(downloaded),
+                "files": downloaded,
+                "folder": tender_folder,
+                "tender": target,
+                "message": f"Successfully downloaded {len(downloaded)} file(s) into tender_{clean_tid}"
+            }
 
     return {
-        "success": True,
-        "downloadedCount": len(downloaded),
-        "files": downloaded,
-        "folder": tender_folder,
-        "message": f"Successfully downloaded {len(downloaded)} file(s) into tender_{clean_tid}"
+        "success": False,
+        "needs_captcha": True,
+        "error": "Captcha required to connect to live portal and download files. Please use the Captcha sync card."
     }

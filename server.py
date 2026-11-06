@@ -51,7 +51,7 @@ from universal_scraper import scrape_any_url
 from action_details_manager import get_action_details, load_cache, sync_single_tender_live
 from build_unified_dataset import build_comprehensive_unified_dataset
 from cpp_tender_manager import (
-    load_cpp_tenders_store, save_cpp_tenders_batch, toggle_cpp_shortlist,
+    load_cpp_tenders_store, save_cpp_tenders_batch, toggle_cpp_shortlist, sync_cpp_tender_with_captcha,
     init_cpp_session, submit_cpp_search_and_crawl, crawl_next_cpp_page,
     import_cpp_raw_html, download_cpp_document, generate_cpp_excel_workbook,
     enrich_cpp_tender_detail, sync_cpp_single_tender_live,
@@ -942,6 +942,45 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', mime)
                 self.send_header('Content-Disposition', f'attachment; filename="{os.path.basename(full_path)}"')
+                self.send_header('Content-Length', str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
+            return
+
+        # Dedicated CPP Sync Captcha fetch
+        elif path == '/api/cpp/get_tender_sync_captcha':
+            mode = query.get('mode', ['active_tenders'])[0]
+            res = init_cpp_session(mode=mode)
+            self.send_json(res, status=200)
+            return
+
+        # Dedicated CPP Inline File Viewer (PDF / BOQ / ZIP)
+        elif path == '/api/cpp/view_file':
+            rel_file = query.get('path', [''])[0].strip().replace('\\', '/')
+            tender_id = query.get('tender_id', [''])[0].strip()
+            filename = query.get('filename', [''])[0].strip()
+
+            full_path = ""
+            if rel_file:
+                full_path = os.path.normpath(os.path.join(DIRECTORY, rel_file))
+            elif tender_id and filename:
+                clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', tender_id)
+                safe_fn = os.path.basename(filename)
+                full_path = os.path.normpath(os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}", safe_fn))
+
+            if not full_path or not os.path.exists(full_path):
+                self.send_json({"error": "File not found"}, status=404)
+                return
+
+            try:
+                with open(full_path, 'rb') as f:
+                    data = f.read()
+                mime = 'application/pdf' if full_path.lower().endswith('.pdf') else 'application/vnd.ms-excel' if full_path.lower().endswith(('.xls', '.xlsx')) else 'application/zip' if full_path.lower().endswith('.zip') else 'application/octet-stream'
+                self.send_response(200)
+                self.send_header('Content-Type', mime)
+                self.send_header('Content-Disposition', f'inline; filename="{os.path.basename(full_path)}"')
                 self.send_header('Content-Length', str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -1870,26 +1909,67 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json(res, status=200 if res.get('success') else 500)
             return
 
-        # 25. CPP Dedicated Single-Tender Live Refresh
+        # 25. CPP Dedicated Single-Tender Live Refresh (with Captcha Sync Support)
         elif path == '/api/cpp/refresh_single':
             body = self.read_json_body()
             tender_id = body.get('tenderId') or body.get('tender_id') or body.get('id', '')
+            session_id = body.get('session_id', '')
+            captcha_text = body.get('captcha_text', '')
             if not tender_id:
                 self.send_json({"success": False, "error": "Missing tenderId"}, status=400)
                 return
-            res = sync_cpp_single_tender_live(str(tender_id))
+            if session_id and captcha_text:
+                res = sync_cpp_tender_with_captcha(session_id, captcha_text, str(tender_id))
+            else:
+                res = sync_cpp_single_tender_live(str(tender_id))
             self.send_json(res, status=200)
             return
 
-        # 26. CPP Download All Documents for Tender
+        # 26. CPP Download All Documents for Tender (with Captcha Sync Support)
         elif path == '/api/cpp/download_all':
             body = self.read_json_body()
             tender_id = body.get('tenderId') or body.get('tender_id') or body.get('id', '')
+            session_id = body.get('session_id', '')
+            captcha_text = body.get('captcha_text', '')
             if not tender_id:
                 self.send_json({"success": False, "error": "Missing tenderId"}, status=400)
                 return
-            res = download_all_cpp_tender_attachments(str(tender_id))
+            if session_id and captcha_text:
+                res = sync_cpp_tender_with_captcha(session_id, captcha_text, str(tender_id))
+            else:
+                res = download_all_cpp_tender_attachments(str(tender_id))
             self.send_json(res, status=200 if res.get('success') else 500)
+            return
+
+        # 26b. CPP Sync With Captcha Direct Route
+        elif path == '/api/cpp/sync_with_captcha':
+            body = self.read_json_body()
+            session_id = body.get('session_id', '')
+            captcha_text = body.get('captcha_text', '')
+            tender_id = body.get('tender_id') or body.get('tenderId') or body.get('id', '')
+            if not session_id or not captcha_text or not tender_id:
+                self.send_json({"success": False, "error": "Missing session_id, captcha_text, or tender_id"}, status=400)
+                return
+            res = sync_cpp_tender_with_captcha(session_id, captcha_text, str(tender_id))
+            self.send_json(res, status=200)
+            return
+
+        # 26c. CPP Open Single File via Windows
+        elif path == '/api/cpp/open_file':
+            body = self.read_json_body()
+            tender_id = body.get('tender_id') or body.get('tenderId', '')
+            filename = body.get('filename', '')
+            clean_tid = re.sub(r'[^a-zA-Z0-9_\-]', '_', str(tender_id))
+            safe_fn = os.path.basename(filename)
+            target_path = os.path.join(CPP_DOWNLOADS_DIR, f"tender_{clean_tid}", safe_fn)
+            if os.path.exists(target_path):
+                try:
+                    os.startfile(os.path.abspath(target_path))
+                    self.send_json({"success": True, "opened": target_path})
+                except Exception as e:
+                    self.send_json({"error": str(e)}, status=500)
+            else:
+                self.send_json({"error": "File not found"}, status=404)
             return
 
         # 27. CPP Open Folder via POST

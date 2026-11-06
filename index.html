@@ -2869,6 +2869,179 @@
             }
         }
 
+        let cppDetailSessionId = "";
+
+        // Load fresh CAPTCHA inside Detail Modal
+        async function loadCppDetailModalCaptcha() {
+            const img = document.getElementById('cppDetailCaptchaImg');
+            const loading = document.getElementById('cppDetailCaptchaLoading');
+            const input = document.getElementById('cppDetailCaptchaInput');
+            if (input) input.value = '';
+            if (img) { img.style.display = 'none'; }
+            if (loading) { loading.style.display = 'inline'; loading.textContent = 'Loading portal captcha...'; }
+
+            try {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/get_tender_sync_captcha`);
+                const res = await resp.json();
+                if (res.success && res.session_id) {
+                    cppDetailSessionId = res.session_id;
+                    let src = res.captcha_image || '';
+                    if (!src && res.captcha_image_base64) {
+                        src = `data:image/png;base64,${res.captcha_image_base64}`;
+                    }
+                    if (img && src) {
+                        img.src = src;
+                        img.style.display = 'block';
+                        if (loading) loading.style.display = 'none';
+                        if (input) setTimeout(() => input.focus(), 80);
+                    }
+                } else {
+                    if (loading) loading.textContent = 'Captcha load failed. Click 🔄 Refresh';
+                }
+            } catch (err) {
+                if (loading) loading.textContent = 'Captcha error. Click 🔄 Refresh';
+            }
+        }
+
+        // Toggle re-sync area
+        function toggleCppDetailReSyncCard(tenderId) {
+            const area = document.getElementById('cppModalReSyncArea');
+            if (!area) return;
+            if (area.style.display === 'block') {
+                area.style.display = 'none';
+                return;
+            }
+            area.style.display = 'block';
+            area.innerHTML = `
+                <div style="background: #f0fdf4; border: 1.5px solid #0284c7; border-radius: 8px; padding: 12px 14px;">
+                    <div style="font-size: 0.82rem; font-weight: 700; color: #0369a1; margin-bottom: 8px;">
+                        🔄 Re-Sync with Portal Live: Enter Captcha to fetch latest updates:
+                    </div>
+                    <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                        <div style="position: relative; min-width: 120px; height: 36px; display: flex; align-items: center; justify-content: center; background: white; border: 1px dashed #cbd5e1; border-radius: 4px;">
+                            <span id="cppDetailCaptchaLoading" style="font-size: 0.74rem; color: #64748b;">Loading...</span>
+                            <img id="cppDetailCaptchaImg" src="" style="display: none; height: 34px;" alt="Captcha" />
+                        </div>
+                        <button type="button" class="btn-top" onclick="loadCppDetailModalCaptcha()" style="padding: 5px 8px; font-size: 0.74rem;">🔄</button>
+                        <input type="text" id="cppDetailCaptchaInput" placeholder="Captcha" style="width: 110px; height: 36px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; font-family: monospace; border: 1.5px solid #0284c7; border-radius: 4px; padding: 0 8px;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(tenderId)}')" />
+                        <button type="button" class="btn-top" onclick="executeCppDetailCaptchaSync('${escapeJsString(tenderId)}')" style="background: #0284c7; color: white; border: none; height: 36px; padding: 0 12px; font-weight: 700; border-radius: 4px;">
+                            Sync Now
+                        </button>
+                    </div>
+                    <div id="cppDetailSyncStatusMsg" style="margin-top: 6px; font-size: 0.78rem; font-weight: 600; display: none;"></div>
+                </div>
+            `;
+            loadCppDetailModalCaptcha();
+        }
+
+        // Execute Captcha Sync for single tender
+        async function executeCppDetailCaptchaSync(tenderId) {
+            const input = document.getElementById('cppDetailCaptchaInput');
+            const captcha = input ? input.value.trim() : '';
+            const statusMsg = document.getElementById('cppDetailSyncStatusMsg');
+            const submitBtn = document.getElementById('btnCppDetailSyncSubmit');
+
+            if (!captcha) {
+                if (statusMsg) {
+                    statusMsg.style.display = 'block';
+                    statusMsg.style.color = '#dc2626';
+                    statusMsg.textContent = 'Kripya Captcha enter karein jo image me dikh raha hai.';
+                }
+                if (input) input.focus();
+                return;
+            }
+
+            if (statusMsg) {
+                statusMsg.style.display = 'block';
+                statusMsg.style.color = '#0284c7';
+                statusMsg.innerHTML = '⏳ Portal se connect kiya ja raha hai... Work details, Fee, EMD aur files capture ho rahi hain...';
+            }
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '⏳ Syncing...';
+            }
+
+            try {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/sync_with_captcha`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        session_id: cppDetailSessionId,
+                        captcha_text: captcha,
+                        tender_id: tenderId
+                    })
+                });
+                const res = await resp.json();
+
+                if (res.success && res.tender) {
+                    showToast(`🎉 Tender #${tenderId} complete details and ${res.downloaded_count || 0} file(s) successfully captured!`);
+                    // Update in master array
+                    const idx = cppTendersData.findIndex(x => (x.tender_id || x.canonical_key) === tenderId);
+                    if (idx !== -1) {
+                        cppTendersData[idx] = res.tender;
+                    }
+                    currentViewingCppTender = res.tender;
+                    // Re-render modal in place with full details
+                    openCppTenderDetail(tenderId);
+                    applyCppFilters();
+                } else if (res.captcha_error) {
+                    if (statusMsg) {
+                        statusMsg.style.display = 'block';
+                        statusMsg.style.color = '#dc2626';
+                        statusMsg.textContent = res.error || 'Invalid Captcha! Please enter new captcha.';
+                    }
+                    if (res.captcha_image || res.captcha_image_base64) {
+                        const img = document.getElementById('cppDetailCaptchaImg');
+                        if (img) {
+                            let src = res.captcha_image || '';
+                            if (!src && res.captcha_image_base64) src = `data:image/png;base64,${res.captcha_image_base64}`;
+                            img.src = src;
+                            img.style.display = 'block';
+                        }
+                    } else {
+                        loadCppDetailModalCaptcha();
+                    }
+                    if (input) { input.value = ''; input.focus(); }
+                } else {
+                    if (statusMsg) {
+                        statusMsg.style.display = 'block';
+                        statusMsg.style.color = '#dc2626';
+                        statusMsg.textContent = res.error || 'Sync failed. Kripya dobara koshish karein.';
+                    }
+                }
+            } catch (err) {
+                if (statusMsg) {
+                    statusMsg.style.display = 'block';
+                    statusMsg.style.color = '#dc2626';
+                    statusMsg.textContent = 'Connection error: ' + err.message;
+                }
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = '🚀 Capture Full Details &amp; Download Files';
+                }
+            }
+        }
+
+        // Open local file via Windows default application
+        async function openCppFile(tenderId, filename) {
+            try {
+                const resp = await fetch(`${getCppApiBase()}/api/cpp/open_file`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ tender_id: tenderId, filename: filename })
+                });
+                const res = await resp.json();
+                if (res.success) {
+                    showToast(`Opening ${filename} in Windows...`);
+                } else {
+                    showToast(res.error || 'Could not open file');
+                }
+            } catch (e) {
+                showToast('Error: ' + e.message);
+            }
+        }
+
         // Open CPPP Deep Dive Modal (Full Details, Documents, Instruments, Live Sync & Folder)
         async function openCppTenderDetail(tenderId) {
             try {
@@ -2893,9 +3066,66 @@
                     slBtn.style.background = t.is_shortlisted ? '#FEFCBF' : '#ffffff';
                 }
 
+                const hasDocs = t.documents && t.documents.length > 0;
+                const hasWorkDesc = t.work_description && t.work_description !== 'Work details not specified' && t.work_description.trim().length > 0;
+                const isSynced = Boolean(t.hasDownloaded) || (hasDocs && hasWorkDesc);
+
                 // Render detail body sections matching Bihar eProc2 dual-card style
                 const body = document.getElementById('cppDetailModalBody');
                 body.innerHTML = `
+                    <!-- Top Status & Captcha Sync Section -->
+                    ${!isSynced ? `
+                        <div id="cppModalSyncCard" style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfeff 100%); border: 2px solid #0284c7; border-radius: 10px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; flex-wrap: wrap; gap: 6px;">
+                                <div style="font-weight: 800; color: #0369a1; font-size: 0.95rem; display: flex; align-items: center; gap: 6px;">
+                                    <span>⚡ Complete Portal Details &amp; Attachments Sync</span>
+                                    <span style="font-size: 0.72rem; background: #e0e7ff; color: #3730a3; padding: 2px 8px; border-radius: 12px; font-weight: 600;">eprocure.gov.in Live</span>
+                                </div>
+                                <div style="font-size: 0.76rem; color: #64748b;">Tender ID: <strong style="font-family: monospace; color: #1e3a8a;">${escapeHtml(cleanTid)}</strong></div>
+                            </div>
+                            <div style="font-size: 0.82rem; color: #334155; margin-bottom: 10px; line-height: 1.45;">
+                                Portal se 100% full tender details (Fee, EMD, work details, dates) aur official NIT &amp; BOQ notices khinch kar <strong>downloads_cpp/</strong> folder me save karne ke liye portal Captcha solve karein:
+                            </div>
+
+                            <!-- Live Captcha Row -->
+                            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #cbd5e1;">
+                                <div style="position: relative; min-width: 130px; height: 38px; display: flex; align-items: center; justify-content: center; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 4px;">
+                                    <span id="cppDetailCaptchaLoading" style="font-size: 0.75rem; color: #64748b;">Loading captcha...</span>
+                                    <img id="cppDetailCaptchaImg" src="" style="display: none; height: 36px; border-radius: 4px;" alt="Captcha" />
+                                </div>
+                                <button type="button" class="btn-top" onclick="loadCppDetailModalCaptcha()" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 6px 10px; font-size: 0.78rem;">
+                                    🔄 Refresh
+                                </button>
+                                <div style="flex: 1; min-width: 140px;">
+                                    <input type="text" id="cppDetailCaptchaInput" placeholder="Enter Captcha (e.g. 5K9TY)" style="width: 100%; height: 38px; font-size: 1.05rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; border: 1.5px solid #0284c7; border-radius: 6px; padding: 0 10px; font-family: monospace;" onkeydown="if(event.key==='Enter') executeCppDetailCaptchaSync('${escapeJsString(cleanTid)}')" />
+                                </div>
+                                <button type="button" class="btn-top" onclick="executeCppDetailCaptchaSync('${escapeJsString(cleanTid)}')" id="btnCppDetailSyncSubmit" style="background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%); color: white; border: none; height: 38px; padding: 0 18px; font-size: 0.88rem; font-weight: 700; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                    <span>🚀 Capture Full Details &amp; Download Files</span>
+                                </button>
+                            </div>
+                            <div id="cppDetailSyncStatusMsg" style="margin-top: 8px; font-size: 0.8rem; font-weight: 600; display: none;"></div>
+                        </div>
+                    ` : `
+                        <div style="background: #f0fdf4; border: 1.5px solid #86efac; border-radius: 8px; padding: 10px 16px; margin-bottom: 14px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.15rem;">✅</span>
+                                <div>
+                                    <div style="font-size: 0.84rem; font-weight: 800; color: #166534;">Complete Portal Data &amp; Attachments Captured Locally!</div>
+                                    <div style="font-size: 0.76rem; color: #15803d;">Official tender files are saved in <code>downloads_cpp/tender_${cleanTid}/</code>. You can view documents below or open folder.</div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button type="button" class="btn-top btn-excel-dl" onclick="openCppFolder('${escapeJsString(cleanTid)}')" style="font-size: 0.78rem; padding: 5px 12px;">
+                                    📁 Open Folder in Windows Explorer
+                                </button>
+                                <button type="button" class="btn-top" onclick="toggleCppDetailReSyncCard('${escapeJsString(cleanTid)}')" style="font-size: 0.78rem; padding: 5px 10px; background: #ffffff; color: #166534; border: 1px solid #86efac;">
+                                    🔄 Re-Sync with Portal
+                                </button>
+                            </div>
+                        </div>
+                        <div id="cppModalReSyncArea" style="display: none; margin-bottom: 14px;"></div>
+                    `}
+
                     <!-- 1. Organisation Chain & System Tender Card -->
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px;">
                         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
@@ -2983,10 +3213,10 @@
                     <div style="background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; padding: 14px;">
                         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
                             <h4 style="font-size: 0.88rem; color: #1e3a8a; margin: 0;">📄 Official Tender Documents &amp; Attachments (${(t.documents || []).length})</h4>
-                            ${t.zip_download_url ? `
-                                <button type="button" class="btn-top" style="background: #047857; color: white; padding: 4px 10px; font-size: 0.78rem;" onclick="downloadCppDoc('${escapeJsString(cleanTid)}', 'zip', 0)">
+                            ${t.zip_download_url || t.zip_local_path ? `
+                                <a href="/api/cpp/view_file?tender_id=${encodeURIComponent(cleanTid)}&filename=${encodeURIComponent(cleanTid + '_all_documents.zip')}" target="_blank" class="btn-top" style="background: #047857; color: white; padding: 4px 10px; font-size: 0.78rem; text-decoration: none;">
                                     📦 Download as ZIP File
-                                </button>
+                                </a>
                             ` : ''}
                         </div>
                         ${renderCppDocumentsTable(t.documents, cleanTid)}
@@ -2998,7 +3228,7 @@
                 if (footer) {
                     footer.innerHTML = `
                         <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
-                            <button class="btn-top" onclick="refreshCppSingleTenderLive('${escapeJsString(cleanTid)}', this)" id="btnCppModalLiveSync" style="background: #f0fdf4; color: #166534; border: 1.5px solid #86efac; font-weight: 700;">
+                            <button class="btn-top" onclick="triggerCppModalLiveSync('${escapeJsString(cleanTid)}', this)" id="btnCppModalLiveSync" style="background: #f0fdf4; color: #166534; border: 1.5px solid #86efac; font-weight: 700;">
                                 🔄 Live Check CPP (ताज़ा डेटा जांचें)
                             </button>
                             <button class="btn-top btn-sync" onclick="downloadAllCppModalAttachments('${escapeJsString(cleanTid)}')" id="btnCppModalDownloadAll">
@@ -3026,6 +3256,11 @@
                 }
 
                 document.getElementById('cppTenderDetailModal').classList.add('active');
+
+                // If not synced yet, auto-load captcha
+                if (!isSynced) {
+                    loadCppDetailModalCaptcha();
+                }
             } catch (e) {
                 showToast("Failed to load details: " + e.message);
             }
@@ -3067,7 +3302,7 @@
         // Render documents table inside modal
         function renderCppDocumentsTable(documents, tenderId) {
             if (!documents || documents.length === 0) {
-                return '<div style="font-size: 0.8rem; color: #64748b;">No direct document links captured. (Use portal direct link or ZIP download).</div>';
+                return '<div style="padding: 12px; background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 6px; font-size: 0.82rem; color: #475569; text-align: center;">Tender documents portal par live uplabdh hain. Upar diye gaye <strong>"Capture Full Details &amp; Download Files"</strong> me Captcha solve karke official NIT aur BOQ file turant folder me download karein.</div>';
             }
             return `
                 <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
@@ -3076,31 +3311,55 @@
                             <th style="padding: 6px 8px;">Document Name</th>
                             <th style="padding: 6px 8px;">Description</th>
                             <th style="padding: 6px 8px;">Size</th>
-                            <th style="padding: 6px 8px; text-align: center;">Action</th>
+                            <th style="padding: 6px 8px; text-align: center;">Action &amp; File Access</th>
                         </tr>
                     </thead>
                     <tbody>
-                        ${documents.map((d, dIdx) => `
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 6px 8px; font-weight: 600; color: #0f172a;">📄 ${escapeHtml(d.name || 'NIT Document')}</td>
-                                <td style="padding: 6px 8px; color: #475569;">${escapeHtml(d.description || 'NIT')}</td>
-                                <td style="padding: 6px 8px; color: #64748b;">${escapeHtml(d.size_kb ? d.size_kb + ' KB' : '-')}</td>
-                                <td style="padding: 6px 8px; text-align: center;">
-                                    ${d.local_path ? `
-                                        <a href="/api/cpp/downloaded_file?path=${encodeURIComponent(d.local_path)}" target="_blank" class="pill-file pill-file-boq">
-                                            ✅ Downloaded (${escapeHtml(d.name)})
-                                        </a>
-                                    ` : (d.download_url ? `
-                                        <button type="button" class="btn-top" style="padding: 3px 8px; font-size: 0.74rem; background: #0284c7; color: white; border: none;" onclick="downloadCppDoc('${escapeJsString(tenderId)}', 'nit', ${dIdx})">
-                                            ⬇️ Download File
-                                        </button>
-                                    ` : '<span style="color:#94a3b8;">Portal direct</span>')}
-                                </td>
-                            </tr>
-                        `).join('')}
+                        ${documents.map((d, dIdx) => {
+                            const isDownloaded = Boolean(d.downloaded) || Boolean(d.local_path);
+                            return `
+                                <tr style="border-bottom: 1px solid #f1f5f9;">
+                                    <td style="padding: 6px 8px; font-weight: 600; color: #0f172a;">📄 ${escapeHtml(d.name || 'NIT Document')}</td>
+                                    <td style="padding: 6px 8px; color: #475569;">${escapeHtml(d.description || 'NIT')}</td>
+                                    <td style="padding: 6px 8px; color: #64748b;">${escapeHtml(d.size_kb ? d.size_kb + ' KB' : (d.size_bytes ? (d.size_bytes/1024).toFixed(1) + ' KB' : '-'))}</td>
+                                    <td style="padding: 6px 8px; text-align: center;">
+                                        ${isDownloaded ? `
+                                            <div style="display: flex; gap: 6px; justify-content: center; align-items: center; flex-wrap: wrap;">
+                                                <a href="/api/cpp/view_file?tender_id=${encodeURIComponent(tenderId)}&filename=${encodeURIComponent(d.name)}" target="_blank" class="btn-top" style="background: #0284c7; color: white; padding: 3px 8px; font-size: 0.74rem; text-decoration: none; border: none; font-weight: 700;">
+                                                    👁️ View File
+                                                </a>
+                                                <button type="button" class="btn-top" onclick="openCppFile('${escapeJsString(tenderId)}', '${escapeJsString(d.name)}')" style="padding: 3px 8px; font-size: 0.74rem; background: #f8fafc; color: #1e293b; border: 1px solid #cbd5e1;">
+                                                    💻 Open
+                                                </button>
+                                                <button type="button" class="btn-top btn-excel-dl" onclick="openCppFolder('${escapeJsString(tenderId)}')" style="padding: 3px 8px; font-size: 0.74rem;">
+                                                    📁 Folder
+                                                </button>
+                                            </div>
+                                        ` : `
+                                            <button type="button" class="btn-top" style="padding: 3px 10px; font-size: 0.74rem; background: #059669; color: white; border: none; font-weight: 700;" onclick="toggleCppDetailReSyncCard('${escapeJsString(tenderId)}')">
+                                                ⬇️ Download with Captcha
+                                            </button>
+                                        `}
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
                     </tbody>
                 </table>
             `;
+        }
+
+        // Trigger Live Sync from modal button
+        function triggerCppModalLiveSync(tenderId, btn) {
+            const syncCard = document.getElementById('cppModalSyncCard') || document.getElementById('cppModalReSyncArea');
+            if (syncCard) {
+                if (syncCard.id === 'cppModalReSyncArea') toggleCppDetailReSyncCard(tenderId);
+                syncCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                const inp = document.getElementById('cppDetailCaptchaInput');
+                if (inp) inp.focus();
+            } else {
+                refreshCppSingleTenderLive(tenderId, btn);
+            }
         }
 
         // Live check single CPP Tender from eprocure.gov.in
@@ -3120,7 +3379,6 @@
                 const data = await res.json();
                 if (data.success && data.tender) {
                     showToast(`✅ Live Check Success: Tender #${tenderId} synced from CPPP!`);
-                    // Update in local array
                     const idx = cppTendersData.findIndex(x => (x.tender_id || x.canonical_key) === tenderId);
                     if (idx !== -1) {
                         cppTendersData[idx] = data.tender;
@@ -3129,6 +3387,9 @@
                         openCppTenderDetail(tenderId);
                     }
                     applyCppFilters();
+                } else if (data.needs_captcha) {
+                    openCppTenderDetail(tenderId);
+                    showToast("Portal Captcha required to fetch live updates");
                 } else {
                     showToast("Live Check: " + (data.error || "Unable to sync tender"));
                 }
@@ -3147,9 +3408,9 @@
             const btn = document.getElementById('btnCppModalDownloadAll');
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = "⏳ Downloading files from portal...";
+                btn.textContent = "⏳ Checking files...";
             }
-            showToast("⏳ Downloading all attachments to downloads_cpp/ folder...");
+            showToast("⏳ Checking attachments for tender #" + tenderId + "...");
 
             try {
                 const res = await fetch(`${getCppApiBase()}/api/cpp/download_all`, {
@@ -3166,6 +3427,17 @@
                         if (idx !== -1) cppTendersData[idx] = data.tender;
                         openCppTenderDetail(tenderId);
                         applyCppFilters();
+                    }
+                    // Offer to open folder
+                    openCppFolder(tenderId);
+                } else if (data.needs_captcha) {
+                    showToast("Portal Captcha required to download files. Solve captcha in card above.");
+                    const syncCard = document.getElementById('cppModalSyncCard') || document.getElementById('cppModalReSyncArea');
+                    if (syncCard) {
+                        if (syncCard.id === 'cppModalReSyncArea') toggleCppDetailReSyncCard(tenderId);
+                        syncCard.scrollIntoView({ behavior: 'smooth' });
+                        const inp = document.getElementById('cppDetailCaptchaInput');
+                        if (inp) inp.focus();
                     }
                 } else {
                     showToast("Download notice: " + (data.error || "Some files could not be downloaded"));

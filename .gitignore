@@ -18,6 +18,9 @@ __pycache__/
 # Local Downloaded PDFs & Tender Attachment Folders
 downloads/*
 !downloads/.gitkeep
+downloads_cpp/*
+!downloads_cpp/.gitkeep
+scratch/
 
 # Temporary Scraped Timestamped Spreadsheets
 Scraped_*.xlsx
