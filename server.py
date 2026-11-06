@@ -13,6 +13,7 @@ Features:
 
 import http.server
 import socketserver
+import socket
 import os
 import json
 import urllib.parse
@@ -248,8 +249,22 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
         path = parsed.path
         query = urllib.parse.parse_qs(parsed.query)
 
+        # 0. Health & Version
+        if path == '/api/health':
+            self.send_json({'status': 'ok', 'service': 'tdsc-tender-platform', 'time': datetime.now().isoformat()})
+            return
+
+        elif path == '/api/app/version':
+            self.send_json({
+                'status': 'ok',
+                'version': '2.4.0',
+                'name': 'TDSC Tender Intelligence & Subscription Platform',
+                'time': datetime.now().isoformat()
+            })
+            return
+
         # 1. Tender Listing (With In-Memory RAM Cache & Server-Side Plan Entitlements)
-        if path == '/api/excel_tenders':
+        elif path == '/api/excel_tenders':
             try:
                 user = self.get_current_user()
                 raw_tenders = load_master_tenders()
@@ -2037,10 +2052,25 @@ if __name__ == "__main__":
     ensure_default_admin()
     ensure_default_employee()
 
-    with ThreadedHTTPServer(("", PORT), PaidTenderRequestHandler) as httpd:
+    candidate_ports = [PORT, 8080, 8001, 8002] if PORT == 8000 else [PORT]
+    httpd = None
+    active_port = PORT
+    for p in candidate_ports:
+        try:
+            httpd = ThreadedHTTPServer(("", p), PaidTenderRequestHandler)
+            active_port = p
+            break
+        except (PermissionError, OSError):
+            continue
+
+    if not httpd:
+        print(f"[ERROR] Could not bind to any port in {candidate_ports}.")
+        sys.exit(1)
+
+    with httpd:
         print("=" * 70)
         print(" TDSC Tender Intelligence & Subscription Platform is LIVE!")
-        print(f" Listening on port {PORT} (http://0.0.0.0:{PORT})")
+        print(f" Listening on port {active_port} (http://0.0.0.0:{active_port})")
         print(" Admin Login:    admin@bihar-etender.in | Password: Admin@Eproc2026")
         print(" Employee Login: employee@tdsc.in       | Password: Employee@Tdsc2026")
         print("=" * 70)
