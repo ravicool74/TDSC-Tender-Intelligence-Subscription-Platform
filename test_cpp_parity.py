@@ -1,11 +1,27 @@
 import unittest
 import json
+import time
+import threading
 import urllib.request
 import urllib.error
+from http.server import HTTPServer
+import server
 
-BASE_URL = "http://127.0.0.1:8000"
+TEST_PORT = 8093
+BASE_URL = f"http://127.0.0.1:{TEST_PORT}"
 
 class TestCppParity(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = HTTPServer(('127.0.0.1', TEST_PORT), server.PaidTenderRequestHandler)
+        cls.server_thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.server_thread.start()
+        time.sleep(0.5)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
     def test_01_get_all_tenders_limit_1000(self):
         req = urllib.request.urlopen(f"{BASE_URL}/api/cpp/tenders?limit=1000")
         self.assertEqual(req.status, 200)

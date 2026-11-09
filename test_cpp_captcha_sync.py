@@ -2,17 +2,35 @@ import unittest
 import json
 import os
 import shutil
+import time
+import threading
 import urllib.request
 import urllib.parse
+from http.server import HTTPServer
+import server
 from cpp_tender_manager import (
     load_cpp_tenders_store, save_cpp_tenders_batch,
     sync_cpp_tender_with_captcha, download_all_cpp_tender_attachments,
     CPP_DOWNLOADS_DIR
 )
 
+TEST_PORT = 8092
+
 class TestCppCaptchaSync(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = HTTPServer(('127.0.0.1', TEST_PORT), server.PaidTenderRequestHandler)
+        cls.server_thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.server_thread.start()
+        time.sleep(0.5)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+
     def setUp(self):
-        self.base_url = "http://127.0.0.1:8000"
+        self.base_url = f"http://127.0.0.1:{TEST_PORT}"
         self.store = load_cpp_tenders_store()
         self.tenders = self.store.get("tenders", [])
         self.assertTrue(len(self.tenders) > 0, "CPP store should have tenders")
