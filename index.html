@@ -293,6 +293,9 @@
             <button class="nav-btn" id="navCpp" onclick="switchAppView('cpp')" style="background: linear-gradient(135deg, #065f46, #047857); color: #ffffff; border: 1.5px solid #10b981; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
                 🇮🇳 Central CPPP Portal (भारत सरकार)
             </button>
+            <button class="nav-btn" id="navPast" onclick="switchAppView('past')" style="background: linear-gradient(135deg, #7c2d12, #9a3412); color: #ffffff; border: 1.5px solid #ea580c; font-weight: 700; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">
+                ⏳ Past Tenders (पुराने टेंडर)
+            </button>
             <button class="nav-btn" id="navPlans" onclick="switchAppView('plans')">
                 💎 Plans &amp; Pricing (प्लान्स)
             </button>
@@ -1371,6 +1374,163 @@
             </div>
         </section>
 
+        <!-- ============================================================== -->
+        <!-- VIEW 7: PAST & EXPIRED TENDERS ARCHIVE (पुराने / समाप्त टेंडर) -->
+        <!-- ============================================================== -->
+        <section id="viewPast" class="app-view">
+            <!-- Past Tenders Hero Header -->
+            <div style="background: linear-gradient(135deg, #7c2d12, #9a3412); color: white; border-radius: 10px; padding: 18px 24px; margin-bottom: 18px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 14px;">
+                <div>
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="font-size: 1.8rem;">📁</span>
+                        <div>
+                            <h2 style="font-size: 1.4rem; font-weight: 800; margin: 0; letter-spacing: 0.3px;">Past &amp; Expired Tenders Archive (पुराने / समाप्त टेंडर)</h2>
+                            <div style="font-size: 0.84rem; opacity: 0.95; margin-top: 3px;">
+                                Jin tenders ka Bid Submission Due Date samapt ho gaya hai, wo yahan safe archive hain &bull; Pura 13-column format, attachments aur Deep-Dive details live jaisa uplabdh hai.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <button type="button" class="btn-top" onclick="exportPastTendersExcel()" style="background: #2563eb; color: white; border: none; font-weight: 700; padding: 7px 14px; border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        📊 Export Past Excel (.xlsx)
+                    </button>
+                    <button type="button" class="btn-top" onclick="loadPastTenders()" style="background: #ffffff; color: #7c2d12; border: 1.5px solid #ea580c; font-weight: 700; padding: 7px 14px; border-radius: 6px; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">
+                        🔄 Refresh Past Tenders
+                    </button>
+                </div>
+            </div>
+
+            <!-- Past Tenders Stat Cards -->
+            <div class="stats-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 14px; margin-bottom: 18px;">
+                <div class="stat-card" style="border-left: 4px solid #ea580c;">
+                    <div class="stat-card-title">TOTAL PAST TENDERS</div>
+                    <div class="stat-card-val" id="statPastTotalCount" style="color: #7c2d12;">2,487</div>
+                    <div class="stat-card-sub">Combined Expired Tenders</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #b45309;">
+                    <div class="stat-card-title">TOTAL ARCHIVE VALUE</div>
+                    <div class="stat-card-val" id="statPastTotalPAC" style="color: #b45309;">₹ 16,659.70 Cr</div>
+                    <div class="stat-card-sub">Cumulative Past Value</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #059669;">
+                    <div class="stat-card-title">CENTRAL CPPP PAST</div>
+                    <div class="stat-card-val" id="statPastCppCount" style="color: #065f46;">1,172</div>
+                    <div class="stat-card-sub">eprocure.gov.in Records</div>
+                </div>
+                <div class="stat-card" style="border-left: 4px solid #2563eb;">
+                    <div class="stat-card-title">BIHAR ePROC PAST</div>
+                    <div class="stat-card-val" id="statPastBiharCount" style="color: #1e40af;">1,315</div>
+                    <div class="stat-card-sub">eproc2.bihar.gov.in Records</div>
+                </div>
+            </div>
+
+            <!-- Past Tenders Filters Toolbar -->
+            <div class="filter-card" style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 18px; margin-bottom: 14px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: center;">
+                    <!-- Portal Selector -->
+                    <div style="min-width: 190px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">SELECT PORTAL</label>
+                        <select id="pastFilterPortal" onchange="applyPastFilters()" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 10px; font-weight: 700; background: #fff7ed; color: #9a3412;">
+                            <option value="all">🌐 All Portals (Central + Bihar)</option>
+                            <option value="cpp">🇮🇳 Central CPPP (eprocure.gov.in)</option>
+                            <option value="bihar">🏛️ Bihar eProc2 (eproc2.bihar.gov.in)</option>
+                        </select>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div style="flex: 2; min-width: 240px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">KEYWORD SEARCH</label>
+                        <input type="text" id="pastSearchInput" placeholder="🔍 Search Past Tenders by ID, Ref, Title, Department, District..." oninput="applyPastFilters()" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 12px; font-size: 0.9rem;" />
+                    </div>
+
+                    <!-- Value Slab Dropdown -->
+                    <div style="min-width: 150px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">VALUE SLAB</label>
+                        <select id="pastFilterSlab" onchange="applyPastFilters()" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 8px; font-size: 0.85rem;">
+                            <option value="all">All Value Slabs (सभी बजट)</option>
+                            <option value="0to25L">Below 25 Lakh (₹ 0 - 25L)</option>
+                            <option value="25Lto50L">25L to 50L (₹ 25L - 50L)</option>
+                            <option value="50Lto2Cr">50L to 2 Cr (₹ 50L - 2 Cr)</option>
+                            <option value="2Crto5Cr">2 Cr to 5 Cr (₹ 2 Cr - 5 Cr)</option>
+                            <option value="Above5Cr">Above 5 Cr (5 करोड़ से ऊपर)</option>
+                            <option value="Not Specified">Not Specified / Hidden</option>
+                        </select>
+                    </div>
+
+                    <!-- Department Dropdown -->
+                    <div style="min-width: 170px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">DEPARTMENT</label>
+                        <select id="pastFilterDept" onchange="applyPastFilters()" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 8px; font-size: 0.85rem;">
+                            <option value="all">All Departments (सभी विभाग)</option>
+                        </select>
+                    </div>
+
+                    <!-- State / Location Dropdown -->
+                    <div style="min-width: 160px;">
+                        <label style="font-size: 0.75rem; font-weight: 700; color: #475569; display: block; margin-bottom: 2px;">LOCATION / STATE</label>
+                        <select id="pastFilterLocation" onchange="applyPastFilters()" style="width: 100%; height: 38px; border: 1.5px solid #cbd5e1; border-radius: 6px; padding: 0 8px; font-size: 0.85rem;">
+                            <option value="all">All Locations (सभी राज्य/स्थान)</option>
+                        </select>
+                    </div>
+
+                    <!-- Shortlisted Checkbox -->
+                    <div style="display: flex; align-items: center; gap: 6px; margin-top: 18px;">
+                        <input type="checkbox" id="pastShortlistOnly" onchange="applyPastFilters()" style="width: 16px; height: 16px; cursor: pointer;" />
+                        <label for="pastShortlistOnly" style="font-size: 0.82rem; font-weight: 700; color: #b45309; cursor: pointer;">★ Starred Only</label>
+                    </div>
+
+                    <!-- Reset Button -->
+                    <div style="margin-top: 18px;">
+                        <button type="button" class="btn-top" onclick="resetPastFilters()" style="height: 38px; background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 12px; font-weight: 700; cursor: pointer;">
+                            🔄 Reset
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Past Tenders Table Header Badge -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span class="badge-results-count" id="pastResultsCountBadge" style="background: #fff7ed; color: #9a3412; border: 1px solid #fdba74; font-weight: 800; font-size: 0.86rem; padding: 4px 12px; border-radius: 20px;">
+                        Showing 0 of 0 Past Tenders
+                    </span>
+                    <span style="font-size: 0.8rem; color: #7c2d12; font-weight: 600;">
+                        ⏳ In tenders ki due date samapt ho chuki hai. Record aur audit ke liye uplabdh hain.
+                    </span>
+                </div>
+                <div style="font-size: 0.78rem; color: #64748b;">
+                    👉 Scroll Horizontally &amp; Vertically to see all 13 fields and action options.
+                </div>
+            </div>
+
+            <!-- Past Tenders 13-Column Table -->
+            <div class="table-wrapper">
+                <table class="tenders-table cpp-tender-table">
+                    <thead>
+                        <tr>
+                            <th class="col-sl">SL.</th>
+                            <th style="width: 140px; text-align: center;">Portal &amp; System No.</th>
+                            <th class="col-id" style="width: 150px; text-align: center;">Tender ID</th>
+                            <th class="col-ref" style="width: 160px;">Reference Number</th>
+                            <th class="col-dept" style="min-width: 220px;">Department / Ministry</th>
+                            <th class="col-pac" style="width: 150px;">Estimated Value (INR)</th>
+                            <th style="width: 140px;">EMD (Amount &amp; Mode)</th>
+                            <th style="width: 140px;">Tender &amp; Processing Fee</th>
+                            <th style="width: 210px;">Bid Dates (Due Date Expired)</th>
+                            <th class="col-desc" style="min-width: 380px;">Detailed Work Description</th>
+                            <th class="col-dist">State / Location</th>
+                            <th style="width: 230px; text-align: center;">⚡ Action &amp; Attachments (Terms, NIT, BOQ)</th>
+                            <th class="col-action">Share on WhatsApp &amp; Email</th>
+                        </tr>
+                    </thead>
+                    <tbody id="pastTenderTableBody">
+                        <!-- Populated dynamically via renderPastTenders() -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
     </main>
 
 
@@ -2239,7 +2399,7 @@
             let data = null;
 
             try {
-                const resp = await fetch(`${apiBase}/api/cpp/tenders?limit=all`);
+                const resp = await fetch(`${apiBase}/api/cpp/tenders?limit=all&status=active`);
                 if (resp.ok) {
                     data = await resp.json();
                 }
@@ -2253,7 +2413,8 @@
                     const fallbackResp = await fetch('cpp_tenders_view.json');
                     if (fallbackResp.ok) {
                         const raw = await fallbackResp.json();
-                        const tList = raw.tenders || [];
+                        const allList = raw.tenders || [];
+                        const tList = allList.filter(t => !isTenderExpired(t));
                         const totalVal = tList.reduce((acc, t) => acc + (t.tender_value_inr || 0), 0);
                         const depts = new Set(tList.map(t => t.department).filter(Boolean));
                         const slCount = tList.filter(t => t.is_shortlisted).length;
@@ -2344,7 +2505,7 @@
             filteredCppTendersData = tenders || [];
             const badge = document.getElementById('cppResultsCountBadge');
             if (badge) {
-                badge.textContent = `Showing ${filteredCppTendersData.length} of ${cppTendersData.length} Central Tenders`;
+                badge.innerHTML = `Showing ${filteredCppTendersData.length} of ${cppTendersData.length} Active Central Tenders <span style="font-size: 0.76rem; color: #9a3412; margin-left: 8px;">(Expired tenders moved to <a href="javascript:void(0)" onclick="switchAppView('past'); setPastPortalFilter('cpp');" style="color: #ea580c; font-weight: 700; text-decoration: underline;">⏳ Past Tenders</a>)</span>`;
             }
 
             if (!filteredCppTendersData || filteredCppTendersData.length === 0) {
@@ -3672,6 +3833,12 @@ Work Description  : ${t.work_description || t.title || 'Central Procurement Work
                 if (viewCpp) viewCpp.classList.add('active');
                 if (navCpp) navCpp.classList.add('active');
                 loadCppTenders();
+            } else if (viewId === 'past') {
+                const viewPast = document.getElementById('viewPast');
+                const navPast = document.getElementById('navPast');
+                if (viewPast) viewPast.classList.add('active');
+                if (navPast) navPast.classList.add('active');
+                loadPastTenders();
             } else if (viewId === 'plans') {
                 document.getElementById('viewPlans').classList.add('active');
                 document.getElementById('navPlans').classList.add('active');
@@ -5789,18 +5956,23 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
             showToast(`Switched view to ${src === 'bihar' ? 'Bihar eProc (' + biharTenders.length + ' Tenders)' : 'Scraped Data (' + allTenders.length + ' Tenders)'}`);
         }
 
+        let biharAllRaw = [];
         async function loadDataFromExcel() {
             try {
                 let res;
                 try {
-                    res = await fetch('/api/excel_tenders');
+                    res = await fetch('/api/excel_tenders?status=active');
                     if (!res.ok) throw new Error('API offline');
                 } catch (apiErr) {
                     // Fallback to static JSON file on GitHub Pages
                     res = await fetch('excel_tenders_view.json');
                 }
                 const data = await res.json();
-                biharTenders = data.tenders || [];
+                biharAllRaw = data.tenders || [];
+                // Only show active tenders in the live Bihar table (due date in future)
+                biharTenders = biharAllRaw.filter(t => !isTenderExpired(t));
+                const pastCnt = data.totalPast !== undefined ? data.totalPast : (biharAllRaw.length - biharTenders.length);
+
                 document.getElementById('tabBiharCount').textContent = biharTenders.length;
 
                 if (currentSource === 'bihar') {
@@ -5808,7 +5980,7 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     populateDropdowns();
                     applyFiltersAndSearch();
                 }
-                showToast(`Loaded ${biharTenders.length} active tenders!`);
+                showToast(`Loaded ${biharTenders.length} active live tenders!`);
             } catch (err) {
                 console.error("Error loading tenders:", err);
             }
@@ -5931,7 +6103,8 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
         function updateMetrics() {
             document.getElementById('statTotalCount').textContent = allTenders.length;
             document.getElementById('statMatchCount').textContent = filteredTenders.length;
-            document.getElementById('resultsCountBadge').textContent = `Showing ${filteredTenders.length} of ${allTenders.length} tenders`;
+            const bPastCnt = (biharAllRaw && biharAllRaw.length) ? (biharAllRaw.length - biharTenders.length) : 1315;
+            document.getElementById('resultsCountBadge').innerHTML = `Showing ${filteredTenders.length} of ${allTenders.length} Active Tenders <span style="font-size: 0.76rem; color: #9a3412; margin-left: 8px;">(Expired tenders moved to <a href="javascript:void(0)" onclick="switchAppView('past'); setPastPortalFilter('bihar');" style="color: #ea580c; font-weight: 700; text-decoration: underline;">⏳ Past Tenders</a>)</span>`;
 
             let sumPAC = 0;
             const dists = new Set();
@@ -6645,6 +6818,450 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             await loadPlans();
             await loadDataFromExcel();
         });
-    </script>
+    
+        // ==============================================================
+        // PAST & EXPIRED TENDERS CONTROLLER (Archive Subsystem)
+        // ==============================================================
+        let pastTendersData = [];
+        let filteredPastTendersData = [];
+        let pastStats = {};
+
+        // Robust date parsing for checking expiry across Central & Bihar date formats
+        function parseTenderDate(dateStr) {
+            if (!dateStr || dateStr === 'N/A' || dateStr === 'NA' || dateStr === '-' || dateStr === 'None') return null;
+            dateStr = String(dateStr).trim();
+
+            // Format: YYYY-MM-DD or YYYY-MM-DD HH:MM
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+                const d = new Date(dateStr.replace(' ', 'T'));
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            // Format: DD-Mon-YYYY HH:MM AM/PM or DD-Mon-YYYY
+            const monMatch = dateStr.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
+            if (monMatch) {
+                const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+                const day = parseInt(monMatch[1], 10);
+                const month = months[monMatch[2].toLowerCase()];
+                const year = parseInt(monMatch[3], 10);
+                let hour = monMatch[4] ? parseInt(monMatch[4], 10) : 23;
+                const min = monMatch[5] ? parseInt(monMatch[5], 10) : 59;
+                const ampm = monMatch[6] ? monMatch[6].toUpperCase() : null;
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return new Date(year, month, day, hour, min, 0);
+            }
+
+            // Format: DD-MM-YYYY HH:MM AM/PM or DD-MM-YYYY
+            const numMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
+            if (numMatch) {
+                const day = parseInt(numMatch[1], 10);
+                const month = parseInt(numMatch[2], 10) - 1;
+                const year = parseInt(numMatch[3], 10);
+                let hour = numMatch[4] ? parseInt(numMatch[4], 10) : 23;
+                const min = numMatch[5] ? parseInt(numMatch[5], 10) : 59;
+                const ampm = numMatch[6] ? numMatch[6].toUpperCase() : null;
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return new Date(year, month, day, hour, min, 0);
+            }
+
+            const fallback = new Date(dateStr);
+            return isNaN(fallback.getTime()) ? null : fallback;
+        }
+
+        function isTenderExpired(t) {
+            const dueStr = t.bid_closing_date || t.bid_submission_end_date || t.dueDate || t.bidSubmissionEndDate || t.bidSubmissionDueDate;
+            const dt = parseTenderDate(dueStr);
+            if (!dt) return false;
+            return dt < new Date();
+        }
+
+        // Load Past Tenders from Server (with static local fallback)
+        async function loadPastTenders() {
+            const apiBase = getCppApiBase();
+            let data = null;
+
+            try {
+                const resp = await fetch(`${apiBase}/api/past_tenders?limit=all`);
+                if (resp.ok) {
+                    data = await resp.json();
+                }
+            } catch (e) {
+                console.warn("[Past Tenders] Cloud/Local API fetch failed, trying local fallback:", e);
+            }
+
+            // Fallback: Combine loaded CPP & Bihar tenders and filter by expired
+            if (!data || !data.success) {
+                try {
+                    let localPast = [];
+                    // 1. CPP expired
+                    if (cppTendersData && cppTendersData.length > 0) {
+                        cppTendersData.forEach(t => {
+                            if (isTenderExpired(t)) {
+                                localPast.push(Object.assign({}, t, { portal: 'cpp', portal_label: 'Central CPPP' }));
+                            }
+                        });
+                    }
+                    // 2. Bihar expired
+                    if (biharTenders && biharTenders.length > 0) {
+                        biharTenders.forEach(t => {
+                            if (isTenderExpired(t)) {
+                                localPast.push(Object.assign({}, t, {
+                                    portal: 'bihar',
+                                    portal_label: 'Bihar eProc2',
+                                    tender_id: String(t.tenderId || ''),
+                                    system_tender_no: String(t.systemTenderNo || t.tenderId || ''),
+                                    tender_ref_no: t.refNo || '',
+                                    title: t.detailedDescription || t.description || '',
+                                    work_description: t.detailedDescription || t.description || '',
+                                    organisation_chain: t.department || '',
+                                    department: t.department || '',
+                                    state_district: t.district || 'Bihar',
+                                    tender_value_inr: Number(t.estimatedValue || 0),
+                                    tender_value_formatted: t.estimatedValueFormatted || '₹ 0.00',
+                                    emd_amount_inr: Number(t.emdAmount || 0),
+                                    emd_amount_formatted: t.emdAmountFormatted || 'Nil',
+                                    tender_fee_inr: Number(t.tenderFee || 0),
+                                    tender_fee_formatted: t.tenderFeeFormatted || 'Nil',
+                                    budget_slab: t.budgetSlab || 'General',
+                                    bid_closing_date: t.dueDate || '',
+                                    is_shortlisted: Boolean(t.isStarred)
+                                }));
+                            }
+                        });
+                    }
+                    const totalVal = localPast.reduce((acc, t) => acc + (t.tender_value_inr || 0), 0);
+                    const cppCnt = localPast.filter(t => t.portal === 'cpp').length;
+                    const biharCnt = localPast.filter(t => t.portal === 'bihar').length;
+                    data = {
+                        success: true,
+                        tenders: localPast,
+                        stats: {
+                            total_past: localPast.length,
+                            cpp_past: cppCnt,
+                            bihar_past: biharCnt,
+                            total_value_cr: roundVal(totalVal / 10000000.0, 2)
+                        }
+                    };
+                } catch (e2) {
+                    console.error("[Past Tenders] Fallback failed:", e2);
+                }
+            }
+
+            if (data && data.success) {
+                pastTendersData = data.tenders || [];
+                pastStats = data.stats || {};
+
+                // Update Stat Cards
+                const statTot = document.getElementById('statPastTotalCount');
+                if (statTot) statTot.textContent = (pastStats.total_past || pastTendersData.length).toLocaleString();
+
+                const statPac = document.getElementById('statPastTotalPAC');
+                if (statPac) statPac.textContent = `₹ ${Number(pastStats.total_value_cr || 0).toFixed(2)} Cr`;
+
+                const statCpp = document.getElementById('statPastCppCount');
+                if (statCpp) statCpp.textContent = (pastStats.cpp_past !== undefined ? pastStats.cpp_past : pastTendersData.filter(t => t.portal === 'cpp').length).toLocaleString();
+
+                const statBihar = document.getElementById('statPastBiharCount');
+                if (statBihar) statBihar.textContent = (pastStats.bihar_past !== undefined ? pastStats.bihar_past : pastTendersData.filter(t => t.portal === 'bihar').length).toLocaleString();
+
+                populatePastDropdowns();
+                applyPastFilters();
+                showToast(`Loaded ${pastTendersData.length} past & expired tenders in archive!`);
+            }
+        }
+
+        function populatePastDropdowns() {
+            const deptSelect = document.getElementById('pastFilterDept');
+            const locSelect = document.getElementById('pastFilterLocation');
+            if (!deptSelect || !locSelect) return;
+
+            const depts = new Set();
+            const locs = new Set();
+
+            pastTendersData.forEach(t => {
+                const dept = t.department || t.organisation_chain;
+                if (dept) depts.add(dept);
+                const loc = t.state_district || t.district;
+                if (loc && loc !== 'Central / Pan-India' && loc !== 'Pan-India') locs.add(loc);
+            });
+
+            const currDept = deptSelect.value;
+            const currLoc = locSelect.value;
+
+            deptSelect.innerHTML = '<option value="all">All Departments (सभी विभाग)</option>';
+            Array.from(depts).sort().forEach(d => {
+                deptSelect.innerHTML += `<option value="${escapeHtml(d)}">${escapeHtml(d.length > 55 ? d.substring(0, 55) + '...' : d)}</option>`;
+            });
+
+            locSelect.innerHTML = '<option value="all">All Locations (सभी राज्य/स्थान)</option>';
+            Array.from(locs).sort().forEach(l => {
+                locSelect.innerHTML += `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`;
+            });
+
+            if (currDept && depts.has(currDept)) deptSelect.value = currDept;
+            if (currLoc && locs.has(currLoc)) locSelect.value = currLoc;
+        }
+
+        function applyPastFilters() {
+            const portal = document.getElementById('pastFilterPortal')?.value || 'all';
+            const query = (document.getElementById('pastSearchInput')?.value || '').toLowerCase().trim();
+            const slab = document.getElementById('pastFilterSlab')?.value || 'all';
+            const dept = document.getElementById('pastFilterDept')?.value || 'all';
+            const loc = document.getElementById('pastFilterLocation')?.value || 'all';
+            const slOnly = Boolean(document.getElementById('pastShortlistOnly')?.checked);
+
+            filteredPastTendersData = pastTendersData.filter(t => {
+                // Portal filter
+                if (portal !== 'all') {
+                    if (portal === 'cpp' && t.portal !== 'cpp') return false;
+                    if (portal === 'bihar' && t.portal !== 'bihar') return false;
+                }
+
+                // Shortlist filter
+                if (slOnly && !t.is_shortlisted) return false;
+
+                // Slab filter
+                if (slab !== 'all' && (t.budget_slab || '').toLowerCase() !== slab.toLowerCase()) return false;
+
+                // Dept filter
+                if (dept !== 'all') {
+                    const d = t.department || t.organisation_chain || '';
+                    if (d !== dept) return false;
+                }
+
+                // Location filter
+                if (loc !== 'all') {
+                    const l = t.state_district || t.district || '';
+                    if (l !== loc) return false;
+                }
+
+                // Search query
+                if (query) {
+                    const corpus = `${t.tender_id || ''} ${t.system_tender_no || ''} ${t.tender_ref_no || ''} ${t.title || ''} ${t.work_description || ''} ${t.organisation_chain || ''} ${t.department || ''} ${t.state_district || ''}`.toLowerCase();
+                    if (!corpus.includes(query)) return false;
+                }
+
+                return true;
+            });
+
+            renderPastTenders(filteredPastTendersData);
+        }
+
+        function resetPastFilters() {
+            const p = document.getElementById('pastFilterPortal'); if (p) p.value = 'all';
+            const q = document.getElementById('pastSearchInput'); if (q) q.value = '';
+            const s = document.getElementById('pastFilterSlab'); if (s) s.value = 'all';
+            const d = document.getElementById('pastFilterDept'); if (d) d.value = 'all';
+            const l = document.getElementById('pastFilterLocation'); if (l) l.value = 'all';
+            const so = document.getElementById('pastShortlistOnly'); if (so) so.checked = false;
+            applyPastFilters();
+        }
+
+        function setPastPortalFilter(portal) {
+            const p = document.getElementById('pastFilterPortal');
+            if (p) {
+                p.value = portal;
+                applyPastFilters();
+            }
+        }
+
+        function renderPastTenders(tenders) {
+            const tbody = document.getElementById('pastTenderTableBody');
+            if (!tbody) return;
+
+            const badge = document.getElementById('pastResultsCountBadge');
+            if (badge) {
+                badge.textContent = `Showing ${tenders.length} of ${pastTendersData.length} Past Tenders`;
+            }
+
+            if (!tenders || tenders.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="13" style="text-align: center; padding: 40px; color: #64748b; font-size: 0.95rem;">
+                            <div style="font-size: 1.8rem; margin-bottom: 6px;">📁</div>
+                            <strong>Koi Past / Expired tender match nahi hua.</strong>
+                            <div style="font-size: 0.82rem; margin-top: 4px; color: #94a3b8;">Filter badal kar check karein.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let rowsHtml = '';
+            tenders.forEach((t, idx) => {
+                const isCpp = (t.portal === 'cpp') || ('tender_value_inr' in t && 'organisation_chain' in t && !('tenderId' in t && typeof t.tenderId === 'number'));
+                const tid = isCpp ? (t.tender_id || t.canonical_key || ('CPP_' + (idx + 1))) : String(t.tenderId || t.tender_id || '');
+                const cleanTid = String(tid);
+                const sysNo = isCpp ? (t.system_tender_no || t.tender_id || '-') : (t.systemTenderNo || t.tenderId || '-');
+                const ref = isCpp ? (t.tender_ref_no || '-') : (t.refNo || '-');
+                const title = isCpp ? (t.title || t.work_description || 'Notice') : (t.detailedDescription || t.description || 'Notice');
+                const desc = isCpp ? (t.work_description || t.title || 'Notice') : (t.detailedDescription || t.description || 'Notice');
+                const org = isCpp ? (t.organisation_chain || t.department || 'Central Government') : (t.department || 'Government Department');
+                const loc = isCpp ? (t.state_district || 'Central / Pan-India') : (t.district || 'Bihar');
+                const valFmt = isCpp ? (t.tender_value_formatted || (t.tender_value_inr ? `₹ ${t.tender_value_inr.toLocaleString()}` : '₹ 0.00')) : (t.estimatedValueFormatted || '₹ 0.00');
+                const emdFmt = isCpp ? (t.emd_amount_formatted || (t.emd_amount_inr ? `₹ ${t.emd_amount_inr.toLocaleString()}` : 'Nil')) : (t.emdAmountFormatted || 'Nil');
+                const emdMode = isCpp ? (t.emd_payable_to ? `Payable: ${t.emd_payable_to}` : 'Demand Draft / BG') : (t.emdMode || 'Challan / BG');
+                const feeFmt = isCpp ? (t.tender_fee_formatted || (t.tender_fee_inr ? `₹ ${t.tender_fee_inr.toLocaleString()}` : 'Nil')) : (t.tenderFeeFormatted || 'Nil');
+                const feeExempt = isCpp ? (t.fee_exemption_allowed || 'No') : 'As per NIT';
+
+                const startDate = isCpp ? (t.bid_submission_start_date || t.published_date || 'N/A') : (t.startDate || 'N/A');
+                const dueDate = isCpp ? (t.bid_closing_date || t.bid_submission_end_date || 'N/A') : (t.dueDate || 'N/A');
+                const openDate = isCpp ? (t.bid_opening_date || 'N/A') : (t.openDate || 'N/A');
+
+                const isSl = Boolean(t.is_shortlisted || t.isStarred);
+
+                // Portal Pill
+                const portalPill = isCpp
+                    ? `<span style="background: #ecfdf5; color: #065f46; font-size: 0.68rem; font-weight: 700; padding: 2px 5px; border-radius: 4px; border: 1px solid #a7f3d0; display: inline-block; margin-bottom: 3px;">🇮🇳 Central CPPP</span>`
+                    : `<span style="background: #eff6ff; color: #1e40af; font-size: 0.68rem; font-weight: 700; padding: 2px 5px; border-radius: 4px; border: 1px solid #bfdbfe; display: inline-block; margin-bottom: 3px;">🏛️ Bihar eProc2</span>`;
+
+                // Action Buttons based on portal
+                const actionBtn = isCpp
+                    ? `<button class="btn-action-view" onclick="openCppTenderDetail('${escapeJsString(cleanTid)}')" title="Click Action button to view details & files">👁️ Action: Deep Dive &amp; Files</button>`
+                    : `<button class="btn-action-view" onclick="openActionModal(${t.tenderId || cleanTid})" title="Click Action button to view details & files">👁️ Action: Deep Dive &amp; Files</button>`;
+
+                const folderBtn = isCpp
+                    ? `<button class="btn-folder-open" onclick="openCppFolder('${escapeJsString(cleanTid)}')" title="Open local folder in Windows Explorer">📁 Open Folder</button>`
+                    : `<button class="btn-folder-open" onclick="openTenderFolder(${t.tenderId || cleanTid})" title="Open local folder in Windows Explorer">📁 Open Folder</button>`;
+
+                const liveCheckBtn = isCpp
+                    ? `<button class="btn-top" onclick="refreshCppSingleTenderLive('${escapeJsString(cleanTid)}', this)" style="padding: 2px 8px; font-size: 0.72rem; background: #fff7ed; color: #9a3412; border: 1.5px solid #fdba74; border-radius: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔄 Check CPP</button>`
+                    : `<button class="btn-top" onclick="refreshSingleTenderLive(${t.tenderId || cleanTid}, this)" style="padding: 2px 8px; font-size: 0.72rem; background: #fff7ed; color: #9a3412; border: 1.5px solid #fdba74; border-radius: 4px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px;">🔄 Check eProc2</button>`;
+
+                rowsHtml += `
+                    <tr style="${isSl ? 'background: #fefce8;' : ''}">
+                        <!-- 1. SL. No. -->
+                        <td class="col-sl"><strong>${idx + 1}</strong></td>
+
+                        <!-- 2. Portal & System Tender No. -->
+                        <td style="text-align: center;">
+                            ${portalPill}
+                            <div style="font-weight: 700; color: #1e3a8a; font-family: monospace; font-size: 0.86rem;">
+                                ${escapeHtml(sysNo)}
+                            </div>
+                        </td>
+
+                        <!-- 3. Tender ID -->
+                        <td class="col-id" style="text-align: center; font-family: monospace; font-weight: 700; color: #9a3412;">
+                            ${escapeHtml(cleanTid)}
+                        </td>
+
+                        <!-- 4. Reference Number -->
+                        <td class="col-ref">${escapeHtml(ref)}</td>
+
+                        <!-- 5. Department / Ministry -->
+                        <td class="col-dept" title="${escapeHtml(org)}">
+                            ${escapeHtml(org.length > 70 ? org.substring(0, 70) + '...' : org)}
+                        </td>
+
+                        <!-- 6. Estimated Value (INR) -->
+                        <td class="col-pac">
+                            <span class="badge-pac-val">${escapeHtml(valFmt)}</span>
+                            ${t.budget_slab ? `<div style="font-size: 0.7rem; color: #64748b; font-weight: 500;">${escapeHtml(t.budget_slab)}</div>` : ''}
+                        </td>
+
+                        <!-- 7. EMD Amount & Mode -->
+                        <td>
+                            <div class="badge-emd-val">${escapeHtml(emdFmt)}</div>
+                            <div style="font-size: 0.72rem; color: #64748b; margin-top: 2px;">${escapeHtml(emdMode)}</div>
+                        </td>
+
+                        <!-- 8. Tender Fee & Processing Fee -->
+                        <td>
+                            <div style="font-size: 0.76rem;">Fee: <strong>${escapeHtml(feeFmt)}</strong></div>
+                            <div style="font-size: 0.74rem; color: #475569;">Exempt: <strong>${escapeHtml(feeExempt)}</strong></div>
+                        </td>
+
+                        <!-- 9. Bid Dates (Expired) -->
+                        <td>
+                            <div style="font-size: 0.74rem; color: #059669;">▶ Start: ${escapeHtml(startDate)}</div>
+                            <div style="font-size: 0.74rem; color: #b91c1c; font-weight: 800; background: #fee2e2; padding: 2px 4px; border-radius: 4px; display: inline-block; margin: 2px 0;">⏰ Expired: ${escapeHtml(dueDate)}</div>
+                            <div style="font-size: 0.74rem; color: #2563eb;">📂 Open: ${escapeHtml(openDate)}</div>
+                        </td>
+
+                        <!-- 10. Detailed Work Description -->
+                        <td class="col-desc" title="${escapeHtml(desc)}">
+                            ${escapeHtml(desc)}
+                        </td>
+
+                        <!-- 11. State / Location -->
+                        <td class="col-dist">
+                            <span class="badge-district">📍 ${escapeHtml(loc)}</span>
+                        </td>
+
+                        <!-- 12. Action & Attachments -->
+                        <td style="text-align: center;">
+                            <div style="display: flex; flex-direction: column; gap: 4px; align-items: center;">
+                                ${actionBtn}
+                                ${liveCheckBtn}
+                                <div style="margin-top: 3px;">
+                                    ${folderBtn}
+                                </div>
+                            </div>
+                        </td>
+
+                        <!-- 13. Share on WhatsApp & Email Actions -->
+                        <td class="col-action">
+                            <button class="btn-share" onclick="openSuggestModalForPastTender(${idx})" style="background: #eff6ff; color: #1d4ed8; border-color: #93c5fd; font-weight: 700; width: 100%; margin-bottom: 3px;" title="Suggest to contractor">
+                                🎯 Suggest Contractor
+                            </button>
+                            <button class="btn-share btn-whatsapp" onclick="sharePastTenderWhatsApp(${idx})" title="Share full tender details on WhatsApp">
+                                💬 WhatsApp
+                            </button>
+                            <button class="btn-share btn-email" onclick="sharePastTenderEmail(${idx})" title="Share full tender details via Email">
+                                ✉️ Email
+                            </button>
+                            <button class="btn-share btn-copy" onclick="copyPastTenderSummary(${idx})" title="Copy formatted tender summary">
+                                📋 Copy
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = rowsHtml;
+        }
+
+        function exportPastTendersExcel() {
+            const portal = document.getElementById('pastFilterPortal')?.value || 'all';
+            window.location.href = `${getCppApiBase()}/api/past_tenders/export_xlsx?portal=${encodeURIComponent(portal)}`;
+            showToast("📊 Downloading Past Tenders Excel workbook...");
+        }
+
+        function sharePastTenderWhatsApp(idx) {
+            const t = filteredPastTendersData[idx];
+            if (!t) return;
+            const text = `📁 *PAST / EXPIRED TENDER ARCHIVE*\n*Tender ID:* ${t.tender_id || t.tenderId}\n*Work:* ${t.work_description || t.title || t.description}\n*Value:* ${t.tender_value_formatted || t.estimatedValueFormatted || 'N/A'}\n*Due Date (Expired):* ${t.bid_closing_date || t.dueDate || 'N/A'}\n*Dept:* ${t.department || t.organisation_chain}\nShared via TDSC Platform`;
+            window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`, '_blank');
+        }
+
+        function sharePastTenderEmail(idx) {
+            const t = filteredPastTendersData[idx];
+            if (!t) return;
+            const sub = `Past Tender Archive: ${t.tender_id || t.tenderId} - ${t.work_description || t.title || t.description}`;
+            const body = `Tender ID: ${t.tender_id || t.tenderId}\nWork: ${t.work_description || t.title || t.description}\nValue: ${t.tender_value_formatted || t.estimatedValueFormatted || 'N/A'}\nDue Date (Expired): ${t.bid_closing_date || t.dueDate || 'N/A'}\nDepartment: ${t.department || t.organisation_chain}`;
+            window.location.href = `mailto:?subject=${encodeURIComponent(sub)}&body=${encodeURIComponent(body)}`;
+        }
+
+        function copyPastTenderSummary(idx) {
+            const t = filteredPastTendersData[idx];
+            if (!t) return;
+            const text = `📁 PAST TENDER: ${t.tender_id || t.tenderId} | ${t.work_description || t.title || t.description} | Value: ${t.tender_value_formatted || t.estimatedValueFormatted} | Due Date (Expired): ${t.bid_closing_date || t.dueDate}`;
+            navigator.clipboard.writeText(text).then(() => showToast("Copied past tender summary to clipboard!"));
+        }
+
+        function openSuggestModalForPastTender(idx) {
+            const t = filteredPastTendersData[idx];
+            if (!t) return;
+            if (t.portal === 'cpp') {
+                openSuggestModalForCppTender(t.tender_id || t.canonical_key);
+            } else {
+                openSuggestModalForTender(t.tenderId || t.tender_id);
+            }
+        }
+
+</script>
 </body>
 </html>

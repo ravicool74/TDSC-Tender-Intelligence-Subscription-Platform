@@ -814,7 +814,7 @@
       "amountFormatted": "₹ 11,800.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_141871_142066",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_141871_142066",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
@@ -855,8 +855,7 @@
       }
     ],
     "boqFiles": [],
-    "totalAttachmentsCount": 6,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 6
   },
   "142156": {
     "tenderId": 142156,
@@ -8961,7 +8960,7 @@
       "amountFormatted": "₹ 1,180.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_142181_142376",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142181_142376",
     "termsAndConditionsFiles": [
       {
         "title": "Accept All Terms And Conditions As Per NIT, SBD/SPECIAL CONDITION  & Tender documents.",
@@ -8998,8 +8997,7 @@
         "templategroupId": 33414
       }
     ],
-    "totalAttachmentsCount": 5,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 5
   },
   "142377": {
     "tenderId": 142377,
@@ -20277,7 +20275,7 @@
       "amountFormatted": "₹ 1,180.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_142331_142526",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142331_142526",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
@@ -20325,8 +20323,7 @@
         "templategroupId": 33414
       }
     ],
-    "totalAttachmentsCount": 7,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 7
   },
   "142522": {
     "tenderId": 142522,
@@ -20662,7 +20659,7 @@
       "amountFormatted": "₹ 1,180.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_142348_142543",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142348_142543",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
@@ -20704,8 +20701,7 @@
         "templategroupId": 33414
       }
     ],
-    "totalAttachmentsCount": 6,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 6
   },
   "142538": {
     "tenderId": 142538,
@@ -21115,7 +21111,7 @@
       "amountFormatted": "₹ 1,180.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_142338_142533",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142338_142533",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
@@ -21157,8 +21153,7 @@
         "templategroupId": 33414
       }
     ],
-    "totalAttachmentsCount": 6,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 6
   },
   "142534": {
     "tenderId": 142534,
@@ -21187,7 +21182,7 @@
       "amountFormatted": "₹ 1,180.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_142339_142534",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_142339_142534",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
@@ -21235,8 +21230,7 @@
         "templategroupId": 33414
       }
     ],
-    "totalAttachmentsCount": 7,
-    "district": "Nalanda"
+    "totalAttachmentsCount": 7
   },
   "142535": {
     "tenderId": 142535,

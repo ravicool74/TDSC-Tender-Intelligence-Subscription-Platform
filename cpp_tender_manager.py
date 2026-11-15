@@ -30,6 +30,7 @@ except AttributeError:
 DIRECTORY = os.path.dirname(os.path.abspath(__file__))
 CPP_VIEW_JSON = os.path.join(DIRECTORY, "cpp_tenders_view.json")
 CPP_EXCEL_PATH = os.path.join(DIRECTORY, "CPP_Central_Gov_Tenders_Comprehensive.xlsx")
+PAST_EXCEL_PATH = os.path.join(DIRECTORY, "Past_Tenders_Comprehensive.xlsx")
 CPP_DOWNLOADS_DIR = os.path.join(DIRECTORY, "downloads_cpp")
 
 # Ensure CPP downloads directory exists
@@ -99,6 +100,53 @@ def compute_budget_slab(val: float) -> str:
         return "2Crto5Cr"
     else:
         return "Above5Cr"
+
+TENDER_DATE_FORMATS = [
+    '%d-%b-%Y %I:%M %p', # 04-Nov-2026 06:30 PM
+    '%d-%m-%Y %I:%M %p', # 01-11-2026 03:00 PM
+    '%Y-%m-%d %H:%M',    # 2026-10-26 15:00
+    '%Y-%m-%d %H:%M:%S', # 2026-10-26 15:00:00
+    '%d-%b-%Y %H:%M',    # 04-Nov-2026 18:30
+    '%d-%m-%Y %H:%M',    # 01-11-2026 15:00
+    '%d-%b-%Y',          # 04-Nov-2026
+    '%d-%m-%Y',          # 01-11-2026
+    '%Y-%m-%d',          # 2026-10-26
+]
+
+def parse_tender_due_date(date_str):
+    if not date_str or date_str in ('N/A', 'NA', 'None', '-', ''):
+        return None
+    date_str = str(date_str).strip()
+    for fmt in TENDER_DATE_FORMATS:
+        try:
+            return datetime.strptime(date_str, fmt)
+        except Exception:
+            pass
+    return None
+
+def is_tender_expired(t, now_dt=None):
+    if now_dt is None:
+        now_dt = datetime.now()
+    due_str = t.get('bid_closing_date') or t.get('bid_submission_end_date') or t.get('dueDate') or t.get('bidSubmissionEndDate') or t.get('bidSubmissionDueDate')
+    dt = parse_tender_due_date(due_str)
+    if dt is None:
+        return False
+    return dt < now_dt
+
+def filter_tenders_by_status(tenders, status='active', now_dt=None):
+    """
+    Filters a list of tenders by status:
+    - 'active': only tenders whose due date is in the future (not expired)
+    - 'past': only tenders whose due date has passed (expired)
+    - 'all': all tenders without status filtering
+    """
+    if not tenders or status == 'all':
+        return tenders
+    if now_dt is None:
+        now_dt = datetime.now()
+    if status == 'past':
+        return [t for t in tenders if is_tender_expired(t, now_dt)]
+    return [t for t in tenders if not is_tender_expired(t, now_dt)]
 
 def extract_state_district_strict(org_chain: str, work_desc: str = "") -> str:
     """
@@ -1859,3 +1907,120 @@ def download_all_cpp_tender_attachments(tender_id: str) -> dict:
         "needs_captcha": True,
         "error": "Captcha required to connect to live portal and download files. Please use the Captcha sync card."
     }
+
+def generate_past_tenders_excel_workbook(tenders=None, output_path=None) -> str:
+    """
+    Generates Past_Tenders_Comprehensive.xlsx containing all expired/past tenders
+    from Central CPPP and/or Bihar eProc2 with styled 13-column sheets.
+    """
+    if tenders is None:
+        store = load_cpp_tenders_store()
+        all_cpp = store.get("tenders", [])
+        now_dt = datetime.now()
+        tenders = [t for t in all_cpp if is_tender_expired(t, now_dt)]
+    elif isinstance(tenders, dict):
+        tenders = tenders.get("tenders", [])
+
+    wb = openpyxl.Workbook()
+    
+    # Theme colors for Past Archive (rust/dark navy palette)
+    header_fill = PatternFill(start_color="7C2D12", end_color="7C2D12", fill_type="solid") # rust red/brown for past/expired
+    sub_fill = PatternFill(start_color="1E3A8A", end_color="1E3A8A", fill_type="solid")
+    stripe_fill = PatternFill(start_color="FFFBEB", end_color="FFFBEB", fill_type="solid")
+    expired_tag_fill = PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid")
+    
+    header_font = Font(name="Segoe UI", size=11, bold=True, color="FFFFFF")
+    data_font = Font(name="Segoe UI", size=10)
+    bold_data_font = Font(name="Segoe UI", size=10, bold=True)
+    expired_font = Font(name="Segoe UI", size=10, bold=True, color="991B1B")
+    
+    thin_border = Border(
+        left=Side(style='thin', color='CBD5E0'),
+        right=Side(style='thin', color='CBD5E0'),
+        top=Side(style='thin', color='CBD5E0'),
+        bottom=Side(style='thin', color='CBD5E0')
+    )
+
+    ws = wb.active
+    ws.title = "Past Tenders Archive"
+    ws.views.sheetView[0].showGridLines = True
+
+    headers = [
+        "S.No", "Portal", "System Tender No", "Tender ID", "Tender Reference No",
+        "Title / Detailed Work Description", "Department / Ministry", "State / Location",
+        "Estimated Value (₹)", "Value Slab", "EMD Amount (₹)", "Tender Fee (₹)",
+        "Due Date (Expired)", "Status", "Shortlisted?"
+    ]
+    
+    ws.append(headers)
+    for col_num in range(1, len(headers) + 1):
+        cell = ws.cell(row=1, column=col_num)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
+
+    for idx, t in enumerate(tenders, start=1):
+        portal = "Central CPPP" if (t.get("portal") == "cpp" or "202" in str(t.get("tender_id",""))) else "Bihar eProc2"
+        sys_no = t.get("system_tender_no") or t.get("systemTenderNo") or t.get("tender_id") or t.get("tenderId") or ""
+        tid = t.get("tender_id") or t.get("tenderId") or t.get("canonical_key") or ""
+        ref = t.get("tender_ref_no") or t.get("refNo") or ""
+        desc = t.get("work_description") or t.get("title") or t.get("detailedDescription") or t.get("description") or ""
+        dept = t.get("organisation_chain") or t.get("department") or ""
+        loc = t.get("state_district") or t.get("district") or "Pan-India"
+        val = float(t.get("tender_value_inr") or t.get("estimatedValue") or 0.0)
+        slab = t.get("budget_slab") or t.get("budgetSlab") or compute_budget_slab(val)
+        emd = float(t.get("emd_amount_inr") or t.get("emdAmount") or 0.0)
+        fee = float(t.get("tender_fee_inr") or t.get("tenderFee") or 0.0)
+        due = t.get("bid_closing_date") or t.get("dueDate") or t.get("bid_submission_end_date") or ""
+        is_sl = t.get("is_shortlisted") or t.get("isStarred")
+
+        row = [
+            idx,
+            portal,
+            str(sys_no),
+            str(tid),
+            str(ref),
+            str(desc),
+            str(dept),
+            str(loc),
+            val,
+            str(slab),
+            emd,
+            fee,
+            str(due),
+            "EXPIRED / PAST",
+            "★ SHORTLISTED" if is_sl else "No"
+        ]
+        ws.append(row)
+        curr_row = ws.max_row
+
+        for c_idx in range(1, len(row) + 1):
+            cell = ws.cell(row=curr_row, column=c_idx)
+            cell.font = data_font
+            cell.border = thin_border
+            if idx % 2 == 0:
+                cell.fill = stripe_fill
+
+            # Format Currency
+            if c_idx in [9, 11, 12]:
+                cell.number_format = '"₹ "#,##0.00'
+                cell.alignment = Alignment(horizontal="right")
+            elif c_idx in [1, 2, 3, 4, 10, 13, 14, 15]:
+                cell.alignment = Alignment(horizontal="center")
+            
+            if c_idx == 13: # Due date expired
+                cell.fill = expired_tag_fill
+                cell.font = expired_font
+
+    for col in ws.columns:
+        max_len = 0
+        col_letter = get_column_letter(col[0].column)
+        for cell in col:
+            v = str(cell.value or "")
+            if len(v) > max_len:
+                max_len = len(v)
+        ws.column_dimensions[col_letter].width = min(max(max_len + 3, 11), 60)
+
+    save_path = output_path or PAST_EXCEL_PATH
+    wb.save(save_path)
+    return save_path

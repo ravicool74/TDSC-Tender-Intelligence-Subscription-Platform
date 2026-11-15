@@ -56,7 +56,9 @@ from cpp_tender_manager import (
     init_cpp_session, submit_cpp_search_and_crawl, crawl_next_cpp_page,
     import_cpp_raw_html, download_cpp_document, generate_cpp_excel_workbook,
     enrich_cpp_tender_detail, sync_cpp_single_tender_live,
-    download_all_cpp_tender_attachments, CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR
+    download_all_cpp_tender_attachments, CPP_EXCEL_PATH, CPP_DOWNLOADS_DIR,
+    parse_tender_due_date, is_tender_expired, filter_tenders_by_status,
+    generate_past_tenders_excel_workbook, PAST_EXCEL_PATH
 )
 
 PORT = int(os.environ.get("PORT", 8000))
@@ -284,10 +286,30 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 
                 # Apply backend plan entitlement masking
                 filtered_tenders = filter_tenders_for_user(raw_tenders, user, LAST_SYNC_TIME)
+                now_dt = datetime.now()
+
+                # Tag each tender with is_past boolean
+                for t in filtered_tenders:
+                    t['is_past'] = is_tender_expired(t, now_dt)
+
+                q_status = query.get('status', ['all'])[0].strip().lower()
+                if q_status == 'active':
+                    display_tenders = [t for t in filtered_tenders if not t.get('is_past')]
+                elif q_status == 'past':
+                    display_tenders = [t for t in filtered_tenders if t.get('is_past')]
+                else: # all or omitted (default for backward compatibility)
+                    display_tenders = filtered_tenders
+
+                active_cnt = sum(1 for t in filtered_tenders if not t.get('is_past'))
+                past_cnt = len(filtered_tenders) - active_cnt
 
                 res = {
-                    "totalTenders": len(filtered_tenders),
-                    "tenders": filtered_tenders,
+                    "totalTenders": len(display_tenders),
+                    "totalUnfiltered": len(filtered_tenders),
+                    "totalActive": active_cnt,
+                    "totalPast": past_cnt,
+                    "statusFilter": q_status,
+                    "tenders": display_tenders,
                     "lastChecked": LAST_SYNC_TIME,
                     "officialSourceUrl": OFFICIAL_SOURCE_BASE,
                     "isPaidActive": bool(user and user.get("subscription", {}).get("isPaidActive")),
@@ -765,8 +787,28 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             try:
                 store = load_cpp_tenders_store()
                 all_tenders = store.get("tenders", [])
-                
+                now_dt = datetime.now()
+
+                # Tag and count active vs past
+                active_tenders_cnt = 0
+                past_tenders_cnt = 0
+                for t in all_tenders:
+                    is_exp = is_tender_expired(t, now_dt)
+                    t['is_past'] = is_exp
+                    if is_exp:
+                        past_tenders_cnt += 1
+                    else:
+                        active_tenders_cnt += 1
+
                 # Extract query filters
+                q_status = query.get('status', ['all'])[0].strip().lower()
+                if q_status == 'past':
+                    tenders_to_filter = [t for t in all_tenders if t.get('is_past')]
+                elif q_status == 'active':
+                    tenders_to_filter = [t for t in all_tenders if not t.get('is_past')]
+                else: # all or omitted (default for backward compatibility)
+                    tenders_to_filter = all_tenders
+
                 q_search = query.get('search', [''])[0].strip().lower()
                 q_slab = query.get('slab', [''])[0].strip()
                 q_state = query.get('state', [''])[0].strip().lower()
@@ -779,19 +821,18 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                     page = 1
                 q_limit_raw = query.get('limit', ['all'])[0].strip().lower()
                 if q_limit_raw in ['all', '0', '-1', 'none', '']:
-                    limit = len(all_tenders) + 50000
+                    limit = len(tenders_to_filter) + 50000
                 else:
                     try:
                         limit = max(1, int(q_limit_raw))
                     except ValueError:
-                        limit = len(all_tenders) + 50000
+                        limit = len(tenders_to_filter) + 50000
 
                 filtered = []
                 total_val_sum = 0.0
                 closing_soon_cnt = 0
-                now_dt = datetime.now()
 
-                for t in all_tenders:
+                for t in tenders_to_filter:
                     # Calculations
                     val = float(t.get('tender_value_inr') or 0.0)
                     total_val_sum += val
@@ -847,12 +888,15 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json({
                     "success": True,
                     "total": len(filtered),
-                    "total_unfiltered": len(all_tenders),
+                    "total_unfiltered": len(tenders_to_filter),
                     "page": page,
                     "limit": limit,
                     "tenders": paged,
                     "stats": {
                         "total_count": len(all_tenders),
+                        "active_count": active_tenders_cnt,
+                        "past_count": past_tenders_cnt,
+                        "status_filter": q_status,
                         "total_value_cr": round(total_val_sum / 10000000.0, 2),
                         "shortlisted_count": shortlisted_cnt,
                         "unique_departments": len(depts)
@@ -932,6 +976,176 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
                 self.send_header('Content-Disposition', 'attachment; filename="CPP_Central_Gov_Tenders_Comprehensive.xlsx"')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                self.send_json({"error": str(e)}, status=500)
+            return
+
+        # 17B. Dedicated Past Tenders Unified Listing API (Both Central CPPP & Bihar eProc2)
+        elif path == '/api/past_tenders':
+            try:
+                now_dt = datetime.now()
+                q_portal = query.get('portal', ['all'])[0].strip().lower()
+                q_search = query.get('search', [''])[0].strip().lower()
+                q_slab = query.get('slab', [''])[0].strip()
+                q_state = query.get('state', [''])[0].strip().lower()
+                q_dept = query.get('dept', [''])[0].strip().lower()
+                q_shortlist = query.get('shortlist_only', [''])[0].strip().lower() in ['true', '1', 'yes']
+                q_sort = query.get('sort', ['date_desc'])[0].strip()
+                try:
+                    page = max(1, int(query.get('page', ['1'])[0]))
+                except ValueError:
+                    page = 1
+                q_limit_raw = query.get('limit', ['all'])[0].strip().lower()
+
+                # 1. Gather CPP past tenders
+                cpp_past = []
+                if q_portal in ['all', 'cpp', 'central']:
+                    store = load_cpp_tenders_store()
+                    for t in store.get("tenders", []):
+                        if is_tender_expired(t, now_dt):
+                            item = dict(t)
+                            item['portal'] = 'cpp'
+                            item['portal_label'] = 'Central CPPP'
+                            cpp_past.append(item)
+
+                # 2. Gather Bihar past tenders
+                bihar_past = []
+                if q_portal in ['all', 'bihar']:
+                    raw_bihar = load_master_tenders()
+                    user = self.get_current_user()
+                    filtered_bihar = filter_tenders_for_user(raw_bihar, user, LAST_SYNC_TIME)
+                    for t in filtered_bihar:
+                        if is_tender_expired(t, now_dt):
+                            item = dict(t)
+                            item['portal'] = 'bihar'
+                            item['portal_label'] = 'Bihar eProc2'
+                            # Normalize essential fields for unified search & rendering
+                            item['tender_id'] = str(item.get('tenderId') or '')
+                            item['system_tender_no'] = str(item.get('systemTenderNo') or item.get('tenderId') or '')
+                            item['tender_ref_no'] = item.get('refNo') or ''
+                            item['title'] = item.get('description') or item.get('detailedDescription') or ''
+                            item['work_description'] = item.get('detailedDescription') or item.get('description') or ''
+                            item['organisation_chain'] = item.get('department') or ''
+                            item['department'] = item.get('department') or ''
+                            item['state_district'] = item.get('district') or 'Bihar'
+                            item['tender_value_inr'] = float(item.get('estimatedValue') or 0.0)
+                            item['tender_value_formatted'] = item.get('estimatedValueFormatted') or '₹ 0.00'
+                            item['emd_amount_inr'] = float(item.get('emdAmount') or 0.0)
+                            item['emd_amount_formatted'] = item.get('emdAmountFormatted') or 'Nil'
+                            item['tender_fee_inr'] = float(item.get('tenderFee') or 0.0)
+                            item['tender_fee_formatted'] = item.get('tenderFeeFormatted') or 'Nil'
+                            item['budget_slab'] = item.get('budgetSlab') or 'General'
+                            item['bid_closing_date'] = item.get('dueDate') or ''
+                            item['bid_submission_end_date'] = item.get('dueDate') or ''
+                            item['bid_submission_start_date'] = item.get('startDate') or ''
+                            item['bid_opening_date'] = item.get('openDate') or ''
+                            item['is_shortlisted'] = bool(item.get('isStarred'))
+                            bihar_past.append(item)
+
+                all_past = cpp_past + bihar_past
+
+                # Apply Filters
+                filtered = []
+                total_val_sum = 0.0
+                for t in all_past:
+                    val = float(t.get('tender_value_inr') or 0.0)
+                    total_val_sum += val
+
+                    # Keyword search
+                    if q_search:
+                        corpus = f"{t.get('tender_id','')} {t.get('system_tender_no','')} {t.get('tender_ref_no','')} {t.get('title','')} {t.get('work_description','')} {t.get('organisation_chain','')} {t.get('department','')} {t.get('state_district','')}".lower()
+                        if q_search not in corpus:
+                            continue
+
+                    # Slab filter
+                    if q_slab and q_slab.lower() != 'all':
+                        if str(t.get('budget_slab', '')).lower() != q_slab.lower():
+                            continue
+
+                    # Location / State / District
+                    if q_state:
+                        if q_state not in str(t.get('state_district', '')).lower():
+                            continue
+
+                    # Department
+                    if q_dept:
+                        if q_dept not in str(t.get('department', '')).lower():
+                            continue
+
+                    # Shortlist only
+                    if q_shortlist and not t.get('is_shortlisted'):
+                        continue
+
+                    filtered.append(t)
+
+                # Sorting
+                if q_sort == 'value_desc':
+                    filtered.sort(key=lambda x: float(x.get('tender_value_inr') or 0.0), reverse=True)
+                elif q_sort == 'value_asc':
+                    filtered.sort(key=lambda x: float(x.get('tender_value_inr') or 0.0))
+                elif q_sort == 'date_asc':
+                    filtered.sort(key=lambda x: str(x.get('bid_closing_date') or x.get('dueDate') or ''))
+                else: # date_desc
+                    filtered.sort(key=lambda x: str(x.get('bid_closing_date') or x.get('dueDate') or ''), reverse=True)
+
+                if q_limit_raw in ['all', '0', '-1', 'none', '']:
+                    limit = len(filtered) + 50000
+                else:
+                    try:
+                        limit = max(1, int(q_limit_raw))
+                    except ValueError:
+                        limit = len(filtered) + 50000
+
+                start_idx = (page - 1) * limit
+                end_idx = start_idx + limit
+                paged = filtered[start_idx:end_idx]
+
+                self.send_json({
+                    "success": True,
+                    "total": len(filtered),
+                    "total_unfiltered": len(all_past),
+                    "page": page,
+                    "limit": limit,
+                    "tenders": paged,
+                    "stats": {
+                        "total_past": len(all_past),
+                        "cpp_past": len(cpp_past),
+                        "bihar_past": len(bihar_past),
+                        "total_value_cr": round(total_val_sum / 10000000.0, 2),
+                        "unique_departments": len(set(t.get('department','') for t in all_past if t.get('department')))
+                    }
+                })
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        # 17C. Dedicated Past Tenders Excel Workbook Export
+        elif path == '/api/past_tenders/export_xlsx':
+            try:
+                q_portal = query.get('portal', ['all'])[0].strip().lower()
+                now_dt = datetime.now()
+                export_tenders = []
+                if q_portal in ['all', 'cpp', 'central']:
+                    store = load_cpp_tenders_store()
+                    for t in store.get("tenders", []):
+                        if is_tender_expired(t, now_dt):
+                            export_tenders.append(dict(t, portal='cpp'))
+                if q_portal in ['all', 'bihar']:
+                    raw_bihar = load_master_tenders()
+                    for t in raw_bihar:
+                        if is_tender_expired(t, now_dt):
+                            export_tenders.append(dict(t, portal='bihar'))
+
+                file_path = generate_past_tenders_excel_workbook(export_tenders)
+                with open(file_path, 'rb') as f:
+                    content = f.read()
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                self.send_header('Content-Disposition', 'attachment; filename="Past_Tenders_Comprehensive.xlsx"')
                 self.send_header('Content-Length', str(len(content)))
                 self.end_headers()
                 self.wfile.write(content)
