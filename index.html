@@ -2365,6 +2365,67 @@
             return '';
         }
 
+        // Server Time Reference (Source of truth for expiration)
+        window.SERVER_TIME_NOW = null;
+
+        // Robust date parsing for checking expiry across Central & Bihar date formats
+        function parseTenderDate(dateStr) {
+            if (!dateStr || dateStr === 'N/A' || dateStr === 'NA' || dateStr === '-' || dateStr === 'None') return null;
+            dateStr = String(dateStr).trim();
+
+            // Format: YYYY-MM-DD or YYYY-MM-DD HH:MM
+            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+                const d = new Date(dateStr.replace(' ', 'T'));
+                return isNaN(d.getTime()) ? null : d;
+            }
+
+            // Format: DD-Mon-YYYY HH:MM AM/PM or DD-Mon-YYYY
+            const monMatch = dateStr.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
+            if (monMatch) {
+                const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
+                const day = parseInt(monMatch[1], 10);
+                const month = months[monMatch[2].toLowerCase()];
+                const year = parseInt(monMatch[3], 10);
+                let hour = monMatch[4] ? parseInt(monMatch[4], 10) : 23;
+                const min = monMatch[5] ? parseInt(monMatch[5], 10) : 59;
+                const ampm = monMatch[6] ? monMatch[6].toUpperCase() : null;
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return new Date(year, month, day, hour, min, 0);
+            }
+
+            // Format: DD-MM-YYYY HH:MM AM/PM or DD-MM-YYYY
+            const numMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
+            if (numMatch) {
+                const day = parseInt(numMatch[1], 10);
+                const month = parseInt(numMatch[2], 10) - 1;
+                const year = parseInt(numMatch[3], 10);
+                let hour = numMatch[4] ? parseInt(numMatch[4], 10) : 23;
+                const min = numMatch[5] ? parseInt(numMatch[5], 10) : 59;
+                const ampm = numMatch[6] ? numMatch[6].toUpperCase() : null;
+                if (ampm === 'PM' && hour < 12) hour += 12;
+                if (ampm === 'AM' && hour === 12) hour = 0;
+                return new Date(year, month, day, hour, min, 0);
+            }
+
+            const fallback = new Date(dateStr);
+            return isNaN(fallback.getTime()) ? null : fallback;
+        }
+
+        function isTenderExpired(t) {
+            if (!t) return false;
+            // If backend already tagged it with server-time precision, trust the server verdict directly
+            if (t.is_past !== undefined && t.is_past !== null) {
+                return Boolean(t.is_past);
+            }
+            const dueStr = t.bid_closing_date || t.bid_submission_end_date || t.dueDate || t.bidSubmissionEndDate || t.bidSubmissionDueDate || t.closing_date || t.submission_end_date;
+            const dt = parseTenderDate(dueStr);
+            if (!dt) return false;
+            // Strict match against server clock
+            const refNow = window.SERVER_TIME_NOW ? new Date(window.SERVER_TIME_NOW) : new Date();
+            return dt.getTime() <= refNow.getTime();
+        }
+
         // State
         let allTenders = [];
         let biharTenders = [];
@@ -2435,7 +2496,10 @@
             }
 
             if (data && data.success) {
-                cppTendersData = data.tenders || [];
+                if (data.serverTime || data.server_time) {
+                    window.SERVER_TIME_NOW = data.serverTime || data.server_time;
+                }
+                cppTendersData = (data.tenders || []).filter(t => !isTenderExpired(t));
                 const stats = data.stats || {};
                 const totalPac = stats.total_value_cr !== undefined ? stats.total_value_cr : (cppTendersData.reduce((acc, t) => acc + (t.tender_value_inr || 0), 0) / 10000000.0);
                 
@@ -2502,7 +2566,8 @@
             const tbody = document.getElementById('cppTenderTableBody');
             if (!tbody) return;
 
-            filteredCppTendersData = tenders || [];
+            // Strict server-time filter: under NO circumstances show expired tenders in live view
+            filteredCppTendersData = (tenders || []).filter(t => !isTenderExpired(t));
             const badge = document.getElementById('cppResultsCountBadge');
             if (badge) {
                 badge.innerHTML = `Showing ${filteredCppTendersData.length} of ${cppTendersData.length} Active Central Tenders <span style="font-size: 0.76rem; color: #9a3412; margin-left: 8px;">(Expired tenders moved to <a href="javascript:void(0)" onclick="switchAppView('past'); setPastPortalFilter('cpp');" style="color: #ea580c; font-weight: 700; text-decoration: underline;">⏳ Past Tenders</a>)</span>`;
@@ -2666,6 +2731,8 @@
             const slOnly = Boolean(document.getElementById('cppShortlistOnly')?.checked);
 
             const filtered = cppTendersData.filter(t => {
+                // Strict server-time expiration check: under NO circumstances should an expired tender appear in live table
+                if (isTenderExpired(t)) return false;
                 if (slOnly && !t.is_shortlisted) return false;
                 if (slab !== 'all' && (t.budget_slab || '').toLowerCase() !== slab.toLowerCase()) return false;
                 if (dept !== 'all' && (t.department || '') !== dept) return false;
@@ -5968,6 +6035,9 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                     res = await fetch('excel_tenders_view.json');
                 }
                 const data = await res.json();
+                if (data.serverTime || data.server_time) {
+                    window.SERVER_TIME_NOW = data.serverTime || data.server_time;
+                }
                 biharAllRaw = data.tenders || [];
                 // Only show active tenders in the live Bihar table (due date in future)
                 biharTenders = biharAllRaw.filter(t => !isTenderExpired(t));
@@ -6048,6 +6118,9 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
             const selectedDept = document.getElementById('deptSelect').value;
 
             filteredTenders = allTenders.filter(t => {
+                // Strict server-time expiration check: under NO circumstances should an expired tender appear in live table
+                if (isTenderExpired(t)) return false;
+
                 // 3-letter keyword search
                 if (rawSearch.length >= 3) {
                     const haystack = [
@@ -6129,8 +6202,10 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
 
         function renderTable() {
             const tbody = document.getElementById('tenderTableBody');
+            // Strict server-time filter: under NO circumstances show expired tenders in live view
+            const liveOnly = (filteredTenders || []).filter(t => !isTenderExpired(t));
 
-            if (filteredTenders.length === 0) {
+            if (liveOnly.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="13" style="text-align: center; padding: 3rem; color: #64748b; font-size: 0.95rem;">
@@ -6141,7 +6216,7 @@ ${(t.detailedDescription || t.description || '').slice(0, 140)}...
                 return;
             }
 
-            tbody.innerHTML = filteredTenders.map(t => {
+            tbody.innerHTML = liveOnly.map(t => {
                 // PAC HTML with locking support
                 let pacHtml = '';
                 if (t.isLocked) {
@@ -6826,56 +6901,7 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
         let filteredPastTendersData = [];
         let pastStats = {};
 
-        // Robust date parsing for checking expiry across Central & Bihar date formats
-        function parseTenderDate(dateStr) {
-            if (!dateStr || dateStr === 'N/A' || dateStr === 'NA' || dateStr === '-' || dateStr === 'None') return null;
-            dateStr = String(dateStr).trim();
-
-            // Format: YYYY-MM-DD or YYYY-MM-DD HH:MM
-            if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-                const d = new Date(dateStr.replace(' ', 'T'));
-                return isNaN(d.getTime()) ? null : d;
-            }
-
-            // Format: DD-Mon-YYYY HH:MM AM/PM or DD-Mon-YYYY
-            const monMatch = dateStr.match(/^(\d{1,2})-([A-Za-z]{3})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
-            if (monMatch) {
-                const months = { jan:0, feb:1, mar:2, apr:3, may:4, jun:5, jul:6, aug:7, sep:8, oct:9, nov:10, dec:11 };
-                const day = parseInt(monMatch[1], 10);
-                const month = months[monMatch[2].toLowerCase()];
-                const year = parseInt(monMatch[3], 10);
-                let hour = monMatch[4] ? parseInt(monMatch[4], 10) : 23;
-                const min = monMatch[5] ? parseInt(monMatch[5], 10) : 59;
-                const ampm = monMatch[6] ? monMatch[6].toUpperCase() : null;
-                if (ampm === 'PM' && hour < 12) hour += 12;
-                if (ampm === 'AM' && hour === 12) hour = 0;
-                return new Date(year, month, day, hour, min, 0);
-            }
-
-            // Format: DD-MM-YYYY HH:MM AM/PM or DD-MM-YYYY
-            const numMatch = dateStr.match(/^(\d{1,2})-(\d{1,2})-(\d{4})(?:\s+(\d{1,2}):(\d{2})(?:\s*([APap][Mm]))?)?/);
-            if (numMatch) {
-                const day = parseInt(numMatch[1], 10);
-                const month = parseInt(numMatch[2], 10) - 1;
-                const year = parseInt(numMatch[3], 10);
-                let hour = numMatch[4] ? parseInt(numMatch[4], 10) : 23;
-                const min = numMatch[5] ? parseInt(numMatch[5], 10) : 59;
-                const ampm = numMatch[6] ? numMatch[6].toUpperCase() : null;
-                if (ampm === 'PM' && hour < 12) hour += 12;
-                if (ampm === 'AM' && hour === 12) hour = 0;
-                return new Date(year, month, day, hour, min, 0);
-            }
-
-            const fallback = new Date(dateStr);
-            return isNaN(fallback.getTime()) ? null : fallback;
-        }
-
-        function isTenderExpired(t) {
-            const dueStr = t.bid_closing_date || t.bid_submission_end_date || t.dueDate || t.bidSubmissionEndDate || t.bidSubmissionDueDate;
-            const dt = parseTenderDate(dueStr);
-            if (!dt) return false;
-            return dt < new Date();
-        }
+        // Note: parseTenderDate and isTenderExpired are hoisted to the top of script for universal server-time matching.
 
         // Load Past Tenders from Server (with static local fallback)
         async function loadPastTenders() {
@@ -6886,6 +6912,9 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 const resp = await fetch(`${apiBase}/api/past_tenders?limit=all`);
                 if (resp.ok) {
                     data = await resp.json();
+                    if (data.serverTime || data.server_time) {
+                        window.SERVER_TIME_NOW = data.serverTime || data.server_time;
+                    }
                 }
             } catch (e) {
                 console.warn("[Past Tenders] Cloud/Local API fetch failed, trying local fallback:", e);

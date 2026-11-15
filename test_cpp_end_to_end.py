@@ -77,8 +77,8 @@ class TestCppEndToEnd(unittest.TestCase):
             self.assertEqual(data["import_result"]["tenders_found"], 2)
             self.assertEqual(data["import_result"]["added"], 2)
 
-        # Query /api/cpp/tenders
-        get_url = f"http://127.0.0.1:{TEST_PORT}/api/cpp/tenders"
+        # Query /api/cpp/tenders?status=all to verify all imported records
+        get_url = f"http://127.0.0.1:{TEST_PORT}/api/cpp/tenders?status=all"
         with urllib.request.urlopen(get_url, timeout=10) as resp:
             self.assertEqual(resp.status, 200)
             res = json.loads(resp.read().decode('utf-8'))
@@ -87,6 +87,15 @@ class TestCppEndToEnd(unittest.TestCase):
             t1 = next(t for t in res["tenders"] if t["tender_id"] == "2026_DOP_933186_1")
             self.assertEqual(t1["tender_value_inr"], 1076893.0)
             self.assertEqual(t1["budget_slab"], "0to25L")
+
+        # Query /api/cpp/tenders (active by default): verify expired tender is strictly excluded
+        get_act_url = f"http://127.0.0.1:{TEST_PORT}/api/cpp/tenders"
+        with urllib.request.urlopen(get_act_url, timeout=10) as resp:
+            self.assertEqual(resp.status, 200)
+            res_act = json.loads(resp.read().decode('utf-8'))
+            self.assertTrue(res_act.get("success"))
+            for t in res_act.get("tenders", []):
+                self.assertFalse(t.get("is_past"))
 
     def test_02_strict_duplicate_rejection_via_api(self):
         """Verify submitting same HTML again via API results in 0 added and 2 duplicates skipped."""

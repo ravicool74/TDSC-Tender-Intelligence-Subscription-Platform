@@ -150,8 +150,14 @@ class TestPastTendersSubsystem(unittest.TestCase):
         for t in d_act.get("tenders", []):
             self.assertFalse(t.get("is_past"))
 
-        # 2. All status (backward compatibility for existing consumers)
-        req_all = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders")
+        # Default is strictly active
+        req_def = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders")
+        d_def = json.loads(req_def.read().decode('utf-8'))
+        self.assertEqual(d_def.get("statusFilter"), "active")
+        self.assertEqual(len(d_def.get("tenders", [])), len(d_act.get("tenders", [])))
+
+        # 2. All status (explicit ?status=all)
+        req_all = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders?status=all")
         d_all = json.loads(req_all.read().decode('utf-8'))
         self.assertEqual(len(d_all.get("tenders", [])), 1454)
         self.assertGreater(d_all.get("totalActive", 0), 50)

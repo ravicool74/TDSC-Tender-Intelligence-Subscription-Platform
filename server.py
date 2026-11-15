@@ -292,13 +292,13 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 for t in filtered_tenders:
                     t['is_past'] = is_tender_expired(t, now_dt)
 
-                q_status = query.get('status', ['all'])[0].strip().lower()
-                if q_status == 'active':
-                    display_tenders = [t for t in filtered_tenders if not t.get('is_past')]
+                q_status = query.get('status', ['active'])[0].strip().lower()
+                if q_status == 'all':
+                    display_tenders = filtered_tenders
                 elif q_status == 'past':
                     display_tenders = [t for t in filtered_tenders if t.get('is_past')]
-                else: # all or omitted (default for backward compatibility)
-                    display_tenders = filtered_tenders
+                else: # 'active' (strict default: under no circumstances appear in live list if expired)
+                    display_tenders = [t for t in filtered_tenders if not t.get('is_past')]
 
                 active_cnt = sum(1 for t in filtered_tenders if not t.get('is_past'))
                 past_cnt = len(filtered_tenders) - active_cnt
@@ -309,6 +309,8 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                     "totalActive": active_cnt,
                     "totalPast": past_cnt,
                     "statusFilter": q_status,
+                    "serverTime": now_dt.isoformat(),
+                    "server_time": now_dt.isoformat(),
                     "tenders": display_tenders,
                     "lastChecked": LAST_SYNC_TIME,
                     "officialSourceUrl": OFFICIAL_SOURCE_BASE,
@@ -801,13 +803,13 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                         active_tenders_cnt += 1
 
                 # Extract query filters
-                q_status = query.get('status', ['all'])[0].strip().lower()
+                q_status = query.get('status', ['active'])[0].strip().lower()
                 if q_status == 'past':
                     tenders_to_filter = [t for t in all_tenders if t.get('is_past')]
-                elif q_status == 'active':
-                    tenders_to_filter = [t for t in all_tenders if not t.get('is_past')]
-                else: # all or omitted (default for backward compatibility)
+                elif q_status == 'all':
                     tenders_to_filter = all_tenders
+                else: # 'active' (strict default: under no circumstances appear in live list if expired)
+                    tenders_to_filter = [t for t in all_tenders if not t.get('is_past')]
 
                 q_search = query.get('search', [''])[0].strip().lower()
                 q_slab = query.get('slab', [''])[0].strip()
@@ -887,6 +889,8 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 self.send_json({
                     "success": True,
+                    "serverTime": now_dt.isoformat(),
+                    "server_time": now_dt.isoformat(),
                     "total": len(filtered),
                     "total_unfiltered": len(tenders_to_filter),
                     "page": page,
@@ -1105,6 +1109,8 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 self.send_json({
                     "success": True,
+                    "serverTime": now_dt.isoformat(),
+                    "server_time": now_dt.isoformat(),
                     "total": len(filtered),
                     "total_unfiltered": len(all_past),
                     "page": page,

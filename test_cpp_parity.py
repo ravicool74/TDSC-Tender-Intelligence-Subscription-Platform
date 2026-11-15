@@ -22,6 +22,7 @@ class TestCppParity(unittest.TestCase):
     def tearDownClass(cls):
         cls.httpd.shutdown()
         cls.httpd.server_close()
+
     def test_01_get_all_tenders_limit_1000(self):
         req = urllib.request.urlopen(f"{BASE_URL}/api/cpp/tenders?limit=1000")
         self.assertEqual(req.status, 200)
@@ -51,12 +52,20 @@ class TestCppParity(unittest.TestCase):
         self.assertIn("folder", data)
 
     def test_03_bihar_eproc_untouched(self):
-        # Bihar tenders must be completely unaffected
-        req = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders")
+        # Bihar tenders master archive must be completely unaffected (1454 tenders)
+        req = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders?status=all")
         self.assertEqual(req.status, 200)
         data = json.loads(req.read().decode('utf-8'))
         self.assertIn("tenders", data)
-        self.assertGreater(len(data.get("tenders", [])), 1000)
+        self.assertEqual(len(data.get("tenders", [])), 1454)
+        self.assertGreater(data.get("totalUnfiltered", 0), 1000)
+
+        # Active view default must exclude expired tenders
+        req_act = urllib.request.urlopen(f"{BASE_URL}/api/excel_tenders")
+        d_act = json.loads(req_act.read().decode('utf-8'))
+        self.assertEqual(d_act.get("statusFilter"), "active")
+        self.assertGreater(len(d_act.get("tenders", [])), 50)
+        self.assertTrue(all(not t.get("is_past") for t in d_act.get("tenders", [])))
 
 if __name__ == '__main__':
     unittest.main()

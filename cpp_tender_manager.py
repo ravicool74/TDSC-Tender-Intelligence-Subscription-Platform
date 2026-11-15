@@ -127,11 +127,19 @@ def parse_tender_due_date(date_str):
 def is_tender_expired(t, now_dt=None):
     if now_dt is None:
         now_dt = datetime.now()
-    due_str = t.get('bid_closing_date') or t.get('bid_submission_end_date') or t.get('dueDate') or t.get('bidSubmissionEndDate') or t.get('bidSubmissionDueDate')
+    due_str = (
+        t.get('bid_closing_date') or 
+        t.get('bid_submission_end_date') or 
+        t.get('dueDate') or 
+        t.get('bidSubmissionEndDate') or 
+        t.get('bidSubmissionDueDate') or
+        t.get('closing_date') or
+        t.get('submission_end_date')
+    )
     dt = parse_tender_due_date(due_str)
     if dt is None:
         return False
-    return dt < now_dt
+    return dt <= now_dt
 
 def filter_tenders_by_status(tenders, status='active', now_dt=None):
     """
