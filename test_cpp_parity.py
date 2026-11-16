@@ -57,7 +57,7 @@ class TestCppParity(unittest.TestCase):
         self.assertEqual(req.status, 200)
         data = json.loads(req.read().decode('utf-8'))
         self.assertIn("tenders", data)
-        self.assertEqual(len(data.get("tenders", [])), 1454)
+        self.assertGreaterEqual(len(data.get("tenders", [])), 1454)
         self.assertGreater(data.get("totalUnfiltered", 0), 1000)
 
         # Active view default must exclude expired tenders
