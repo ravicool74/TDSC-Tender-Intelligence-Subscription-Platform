@@ -134,12 +134,29 @@ def clean_text(v):
 def clean_mobile(v):
     if not v:
         return ""
-    digits = re.sub(r'[^0-9]', '', str(v))
+    if isinstance(v, (int, float)):
+        try:
+            v = int(v)
+        except Exception:
+            pass
+    s = str(v).strip()
+    if s.endswith('.0'):
+        s = s[:-2]
+    # Match standard Indian 10-digit mobile number starting with 6, 7, 8, or 9
+    match = re.search(r'(?:\+?91|0)?\s*([6-9]\d{9})\b', s)
+    if match:
+        return match.group(1)
+    digits = re.sub(r'[^0-9]', '', s)
     if len(digits) == 12 and digits.startswith('91'):
         digits = digits[2:]
-    elif len(digits) > 10:
-        digits = digits[-10:]
-    return digits if len(digits) == 10 else digits
+    elif len(digits) == 11 and digits.startswith('0'):
+        digits = digits[1:]
+    elif len(digits) >= 10:
+        if digits[:10][0] in '6789':
+            digits = digits[:10]
+        else:
+            digits = digits[-10:]
+    return digits if len(digits) == 10 else ""
 
 PAN_REGEX = re.compile(r'^[A-Z]{5}[0-9]{4}[A-Z]$', re.IGNORECASE)
 
