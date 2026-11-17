@@ -1664,18 +1664,19 @@
                         <thead>
                             <tr style="background: #1e3a8a; color: white;">
                                 <th style="width: 50px; text-align: center;">SL.</th>
-                                <th style="width: 140px; text-align: center;">Application ID</th>
+                                <th style="width: 140px; text-align: center;">ApplicationID</th>
                                 <th style="min-width: 200px;">Applicant / Firm / Company Name</th>
-                                <th style="min-width: 160px;">Father / Director Name</th>
-                                <th style="width: 130px; text-align: center;">District</th>
-                                <th style="width: 160px; text-align: center;">Mobile &amp; WhatsApp</th>
+                                <th style="min-width: 160px;">Applicant Father / Director Name</th>
+                                <th style="width: 90px; text-align: center;">DoB/DoA</th>
+                                <th style="min-width: 220px;">Address</th>
+                                <th style="width: 120px; text-align: center;">District</th>
+                                <th style="width: 80px; text-align: center;">Cast</th>
+                                <th style="width: 80px; text-align: center;">Gender</th>
                                 <th style="min-width: 180px;">Email ID</th>
                                 <th style="width: 130px; text-align: center;">Entity Type</th>
-                                <th style="width: 80px; text-align: center;">Caste</th>
-                                <th style="min-width: 220px;">Address</th>
+                                <th style="width: 160px; text-align: center;">Mobile No</th>
                                 <th style="width: 110px; text-align: center;">PAN No</th>
-                                <th style="min-width: 170px;">Calling Remarks / Notes</th>
-                                <th style="width: 160px; text-align: center;">⚡ Actions</th>
+                                <th style="width: 150px; text-align: center;">⚡ Actions</th>
                             </tr>
                         </thead>
                         <tbody id="contractorMasterTableBody">
@@ -7852,7 +7853,7 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             if (!contractors || contractors.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="13" style="text-align: center; padding: 40px; color: #64748b;">
+                        <td colspan="14" style="text-align: center; padding: 40px; color: #64748b;">
                             <div style="font-size: 1.8rem; margin-bottom: 6px;">🔍</div>
                             <strong>Koi thekedar match nahi hua.</strong>
                             <div style="font-size: 0.8rem; margin-top: 4px; color: #94a3b8;">Search keyword ya district filter badal kar check karein.</div>
@@ -7868,14 +7869,15 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 const appId = c.application_id || c.contractor_id || ('CON-' + c.id);
                 const firm = c.company_name || 'Individual Contractor';
                 const director = c.director_name || c.contact_person || '-';
+                const dob = c.dob_doa || '-';
+                const addr = c.address || '-';
                 const dist = c.district || 'Bihar';
-                const mobile = c.mobile || '';
+                const cast = c.cast || 'GEN';
+                const gender = c.gender || '-';
                 const email = c.email || '-';
                 const entity = c.entity_type || 'Individual';
-                const cast = c.cast || 'GEN';
+                const mobile = c.mobile || '';
                 const pan = c.pan_no || '-';
-                const addr = c.address || '-';
-                const remarks = c.calling_remarks || c.notes || '-';
 
                 // Clean 10 digit mobile for whatsapp
                 let waButton = '';
@@ -7890,43 +7892,73 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
 
                 html += `
                     <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.83rem;">
+                        <!-- 1. SL. No. -->
                         <td style="text-align: center; font-weight: 700; color: #64748b;">${slNo}</td>
+
+                        <!-- 2. ApplicationID -->
                         <td style="text-align: center; font-family: monospace; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
                             <span style="background: #eff6ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #bfdbfe;">${escapeHtml(appId)}</span>
                         </td>
+
+                        <!-- 3. Applicant/Firm/Company Name -->
                         <td style="font-weight: 800; color: #0f172a; max-width: 220px;">
                             ${escapeHtml(firm)}
                         </td>
+
+                        <!-- 4. Applicant Father/Director Name -->
                         <td style="color: #334155; font-weight: 600;">
                             ${escapeHtml(director)}
                         </td>
+
+                        <!-- 5. DoB/DoA -->
+                        <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
+                            ${escapeHtml(dob)}
+                        </td>
+
+                        <!-- 6. Address -->
+                        <td style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
+                            ${escapeHtml(addr.length > 70 ? addr.substring(0, 70) + '...' : addr)}
+                        </td>
+
+                        <!-- 7. District -->
                         <td style="text-align: center;">
                             <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.76rem; white-space: nowrap;">
                                 📍 ${escapeHtml(dist)}
                             </span>
                         </td>
+
+                        <!-- 8. Cast -->
+                        <td style="text-align: center; white-space: nowrap;">
+                            <span style="background: #fefce8; border: 1px solid #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${escapeHtml(cast)}</span>
+                        </td>
+
+                        <!-- 9. Gender -->
+                        <td style="text-align: center; font-size: 0.76rem; font-weight: 600; color: #475569; white-space: nowrap;">
+                            ${escapeHtml(gender)}
+                        </td>
+
+                        <!-- 10. Email ID -->
+                        <td style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
+                            ${escapeHtml(email)}
+                        </td>
+
+                        <!-- 11. Entity Type -->
+                        <td style="text-align: center; white-space: nowrap;">
+                            <span style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #475569;">${escapeHtml(entity)}</span>
+                        </td>
+
+                        <!-- 12. Mobile No -->
                         <td style="text-align: center; white-space: nowrap;">
                             <div>${callLink}</div>
                             ${waButton}
                         </td>
-                        <td style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
-                            ${escapeHtml(email)}
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <span style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #475569;">${escapeHtml(entity)}</span>
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <span style="background: #fefce8; border: 1px solid #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${escapeHtml(cast)}</span>
-                        </td>
-                        <td style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
-                            ${escapeHtml(addr.length > 70 ? addr.substring(0, 70) + '...' : addr)}
-                        </td>
+
+                        <!-- 13. PAN No -->
                         <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
                             ${escapeHtml(pan)}
                         </td>
-                        <td style="font-size: 0.76rem; color: #b45309; font-weight: 600; max-width: 170px;" title="${escapeHtml(remarks)}">
-                            ${escapeHtml(remarks !== '-' ? '📝 ' + remarks : '-')}
-                        </td>
+
+                        <!-- 14. Actions -->
                         <td style="text-align: center; white-space: nowrap;">
                             <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                                 <button class="btn-top" onclick="openMatchTendersForContractor(${c.id}, '${escapeJsString(dist)}', '${escapeJsString(firm)}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Match Live Tenders in this Contractor's District">

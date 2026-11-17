@@ -25,6 +25,8 @@ scratch/
 # Temporary Scraped Timestamped Spreadsheets
 Scraped_*.xlsx
 temp_*.xlsx
+ser_page.html
+ser_page_files/
 contractors_master_sheet.xlsx
 contractors_google_sheet_export.csv
 

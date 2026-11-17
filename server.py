@@ -1593,6 +1593,61 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"success": True, "planId": plan_id, "isActive": new_state, "message": msg})
             return
 
+        # 11e-2. Live Browser Sync from open Contractor Search tab
+        elif path == '/api/contractors/import_browser':
+            try:
+                length = int(self.headers.get('Content-Length', 0))
+                body_bytes = self.rfile.read(length) if length > 0 else b''
+                raw_text = body_bytes.decode('utf-8', errors='replace')
+                contractors = []
+                data = {}
+                try:
+                    data = json.loads(raw_text)
+                except Exception:
+                    pass
+
+                # If direct contractors array passed
+                if isinstance(data, dict) and data.get('contractors'):
+                    contractors = data.get('contractors')
+                else:
+                    html_content = data.get('html', raw_text) if isinstance(data, dict) else raw_text
+                    with open('ser_page.html', 'w', encoding='utf-8') as fp:
+                        fp.write(html_content)
+                    from scratch.parse_ser_page import parse_ser_html
+                    contractors = parse_ser_html('ser_page.html')
+
+                from ser_interactive_scraper import create_styled_excel
+
+                excel_path = create_styled_excel(contractors[:5], 'SER_Contractors_Sample_5.xlsx')
+
+                # Also insert into database
+                for c in contractors[:5]:
+                    contractor_crm_manager.add_contractor_entry({
+                        "company_name": c.get("company_name", ""),
+                        "application_id": c.get("application_id", ""),
+                        "director_name": c.get("director_name", ""),
+                        "dob_doa": c.get("dob_doa", ""),
+                        "address": c.get("address", ""),
+                        "district": c.get("district", ""),
+                        "cast": c.get("cast", ""),
+                        "gender": c.get("gender", ""),
+                        "email": c.get("email", ""),
+                        "entity_type": c.get("entity_type", ""),
+                        "mobile": c.get("mobile", ""),
+                        "pan_no": c.get("pan_no", ""),
+                        "calling_remarks": "Imported from SER Class 4 Live Portal"
+                    })
+
+                self.send_json({
+                    "success": True,
+                    "count": len(contractors[:5]),
+                    "contractors": contractors[:5],
+                    "excel_file": "SER_Contractors_Sample_5.xlsx"
+                })
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=400)
+            return
+
         # 11e. Staff / Admin: Create Contractor
         elif path == '/api/contractors/create':
             try:
