@@ -8,615 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Razorpay Standard Checkout SDK -->
-    <script src="https://checkout.razorpay.com/v1/checkout.js">
-        // ==============================================================
-        // CONTRACTOR MASTER DATABASE & CRM CONTROLLER (54,680+ RECORDS)
-        // ==============================================================
-        let contractorMasterData = [];
-        let contractorMasterPage = 1;
-        let contractorMasterLimit = 50;
-        let contractorMasterTotal = 0;
-        let contractorMasterDistricts = [];
-        let currentMatchingContractor = null;
-
-        async function loadContractorsMasterList(page = null) {
-            if (page !== null) contractorMasterPage = page;
-            const searchVal = (document.getElementById('conSearchInput')?.value || '').trim();
-            const districtVal = document.getElementById('conFilterDistrict')?.value || 'all';
-            const entityVal = document.getElementById('conFilterEntity')?.value || 'all';
-            const castVal = document.getElementById('conFilterCast')?.value || 'all';
-            const sortVal = document.getElementById('conFilterSort')?.value || 'name_asc';
-
-            const tbody = document.getElementById('contractorMasterTableBody');
-            if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #1e3a8a;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading contractors from database...</td></tr>`;
-            }
-
-            try {
-                const queryParams = new URLSearchParams({
-                    q: searchVal,
-                    district: districtVal,
-                    entity_type: entityVal,
-                    cast: castVal,
-                    sort: sortVal,
-                    page: String(contractorMasterPage),
-                    limit: String(contractorMasterLimit)
-                });
-
-                const resp = await fetch(`/api/contractors?${queryParams.toString()}`);
-                if (!resp.ok) throw new Error("API failed");
-                const data = await resp.json();
-
-                contractorMasterData = data.contractors || [];
-                contractorMasterTotal = data.total || 0;
-                contractorMasterDistricts = data.districts || [];
-
-                // Populate District dropdown if not populated
-                populateContractorDistrictDropdown(contractorMasterDistricts, districtVal);
-
-                // Update Stats
-                const stats = data.stats || {};
-                const statTot = document.getElementById('statConTotalCount');
-                if (statTot) statTot.textContent = (stats.total_contractors || contractorMasterTotal).toLocaleString();
-                const statMob = document.getElementById('statConMobileCount');
-                if (statMob) statMob.textContent = (stats.verified_mobiles || 51877).toLocaleString();
-                const statDist = document.getElementById('statConDistrictsCount');
-                if (statDist) statDist.textContent = (stats.districts_count || contractorMasterDistricts.length || 38).toLocaleString();
-
-                // Results Badge
-                const startIdx = contractorMasterTotal === 0 ? 0 : (contractorMasterPage - 1) * contractorMasterLimit + 1;
-                const endIdx = Math.min(contractorMasterPage * contractorMasterLimit, contractorMasterTotal);
-                const badge = document.getElementById('conResultsCountBadge');
-                if (badge) {
-                    badge.textContent = `Showing ${startIdx} to ${endIdx} of ${contractorMasterTotal.toLocaleString()} Contractors`;
-                }
-
-                // Render Table Rows
-                renderContractorMasterTableRows(contractorMasterData, startIdx);
-
-                // Update Pagination Controls
-                const totalPages = Math.max(1, Math.ceil(contractorMasterTotal / contractorMasterLimit));
-                const pageInfo = document.getElementById('conPaginationInfo');
-                if (pageInfo) pageInfo.textContent = `Page ${contractorMasterPage} of ${totalPages} (${contractorMasterTotal.toLocaleString()} total)`;
-                const curPageNum = document.getElementById('conCurrentPageNum');
-                if (curPageNum) curPageNum.textContent = `${contractorMasterPage}`;
-                
-                const btnPrev = document.getElementById('btnConPrevPage');
-                if (btnPrev) btnPrev.disabled = contractorMasterPage <= 1;
-                const btnNext = document.getElementById('btnConNextPage');
-                if (btnNext) btnNext.disabled = contractorMasterPage >= totalPages;
-
-            } catch (err) {
-                console.error("Error loading contractors master:", err);
-                if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #dc2626;">Error loading contractors database. Please verify local server is running.</td></tr>`;
-                }
-            }
-        }
-
-        function populateContractorDistrictDropdown(districts, selectedDist) {
-            const select = document.getElementById('conFilterDistrict');
-            const addSelect = document.getElementById('addConDistrict');
-            const editSelect = document.getElementById('editConDistrict');
-            if (!select || select.options.length > 5) return;
-
-            const standard38 = [
-                'Araria', 'Arwal', 'Aurangabad', 'Banka', 'Begusarai', 'Bhagalpur', 'Bhojpur', 'Buxar',
-                'Darbhanga', 'East Champaran', 'Gaya', 'Gopalganj', 'Jamui', 'Jehanabad', 'Kaimur (Bhabua)',
-                'Katihar', 'Khagaria', 'Kishanganj', 'Lakhisarai', 'Madhepura', 'Madhubani', 'Munger',
-                'Muzaffarpur', 'Nalanda', 'Nawada', 'Patna', 'Purnia', 'Rohtas', 'Saharsa', 'Samastipur',
-                'Saran', 'Sheikhpura', 'Sheohar', 'Sitamarhi', 'Siwan', 'Supaul', 'Vaishali', 'West Champaran'
-            ];
-
-            const allDists = Array.from(new Set([...standard38, ...districts])).sort();
-            
-            // Filter dropdown
-            select.innerHTML = '<option value="all">All Districts (सभी 38 ज़िले)</option>';
-            allDists.forEach(d => {
-                const opt = document.createElement('option');
-                opt.value = d;
-                opt.textContent = d;
-                select.appendChild(opt);
-            });
-            if (selectedDist) select.value = selectedDist;
-
-            // Add modal dropdown
-            if (addSelect && addSelect.options.length <= 1) {
-                addSelect.innerHTML = '<option value="">Select District</option>';
-                allDists.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.textContent = d;
-                    addSelect.appendChild(opt);
-                });
-            }
-
-            // Edit modal dropdown
-            if (editSelect && editSelect.options.length <= 1) {
-                editSelect.innerHTML = '<option value="">Select District</option>';
-                allDists.forEach(d => {
-                    const opt = document.createElement('option');
-                    opt.value = d;
-                    opt.textContent = d;
-                    editSelect.appendChild(opt);
-                });
-            }
-        }
-
-        function renderContractorMasterTableRows(contractors, startIdx) {
-            const tbody = document.getElementById('contractorMasterTableBody');
-            if (!tbody) return;
-
-            if (!contractors || contractors.length === 0) {
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="13" style="text-align: center; padding: 40px; color: #64748b;">
-                            <div style="font-size: 1.8rem; margin-bottom: 6px;">🔍</div>
-                            <strong>Koi thekedar match nahi hua.</strong>
-                            <div style="font-size: 0.8rem; margin-top: 4px; color: #94a3b8;">Search keyword ya district filter badal kar check karein.</div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            let html = '';
-            contractors.forEach((c, i) => {
-                const slNo = startIdx + i;
-                const appId = c.application_id || c.contractor_id || ('CON-' + c.id);
-                const firm = c.company_name || 'Individual Contractor';
-                const director = c.director_name || c.contact_person || '-';
-                const dist = c.district || 'Bihar';
-                const mobile = c.mobile || '';
-                const email = c.email || '-';
-                const entity = c.entity_type || 'Individual';
-                const cast = c.cast || 'GEN';
-                const pan = c.pan_no || '-';
-                const addr = c.address || '-';
-                const remarks = c.calling_remarks || c.notes || '-';
-
-                // Clean 10 digit mobile for whatsapp
-                let waButton = '';
-                let callLink = '<span style="color: #94a3b8;">-</span>';
-                if (mobile) {
-                    const cleanMob = mobile.replace(/[^0-9]/g, '');
-                    const waNum = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
-                    const waText = encodeURIComponent(`नमस्ते ${director || firm} जी, TDSC Bidding Support Desk से हम आपके लिए Bihar eProcurement और Central CPPP के नए टेंडर विवरण साझा करना चाहते हैं।`);
-                    waButton = `<a href="https://api.whatsapp.com/send?phone=${waNum}&text=${waText}" target="_blank" class="btn-share btn-whatsapp" style="padding: 2px 8px; font-size: 0.72rem; margin-top: 3px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">💬 WhatsApp</a>`;
-                    callLink = `<a href="tel:${mobile}" style="color: #1e3a8a; font-weight: 700; text-decoration: none;">📞 ${escapeHtml(mobile)}</a>`;
-                }
-
-                html += `
-                    <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.83rem;">
-                        <td style="text-align: center; font-weight: 700; color: #64748b;">${slNo}</td>
-                        <td style="text-align: center; font-family: monospace; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
-                            <span style="background: #eff6ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #bfdbfe;">${escapeHtml(appId)}</span>
-                        </td>
-                        <td style="font-weight: 800; color: #0f172a; max-width: 220px;">
-                            ${escapeHtml(firm)}
-                        </td>
-                        <td style="color: #334155; font-weight: 600;">
-                            ${escapeHtml(director)}
-                        </td>
-                        <td style="text-align: center;">
-                            <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.76rem; white-space: nowrap;">
-                                📍 ${escapeHtml(dist)}
-                            </span>
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <div>${callLink}</div>
-                            ${waButton}
-                        </td>
-                        <td style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
-                            ${escapeHtml(email)}
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <span style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #475569;">${escapeHtml(entity)}</span>
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <span style="background: #fefce8; border: 1px solid #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${escapeHtml(cast)}</span>
-                        </td>
-                        <td style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
-                            ${escapeHtml(addr.length > 70 ? addr.substring(0, 70) + '...' : addr)}
-                        </td>
-                        <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
-                            ${escapeHtml(pan)}
-                        </td>
-                        <td style="font-size: 0.76rem; color: #b45309; font-weight: 600; max-width: 170px;" title="${escapeHtml(remarks)}">
-                            ${escapeHtml(remarks !== '-' ? '📝 ' + remarks : '-')}
-                        </td>
-                        <td style="text-align: center; white-space: nowrap;">
-                            <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
-                                <button class="btn-top" onclick="openMatchTendersForContractor(${c.id}, '${escapeJsString(dist)}', '${escapeJsString(firm)}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Match Live Tenders in this Contractor's District">
-                                    🎯 Match
-                                </button>
-                                <button class="btn-top" onclick="openEditContractorModalMaster(${c.id})" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Edit Contractor Details">
-                                    ✏️
-                                </button>
-                                <button class="btn-top" onclick="deleteContractorMaster(${c.id}, '${escapeJsString(firm)}')" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Delete Contractor">
-                                    🗑️
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            tbody.innerHTML = html;
-        }
-
-        function applyContractorMasterFilters(page = 1) {
-            loadContractorsMasterList(page);
-        }
-
-        function resetContractorFilters() {
-            const sInput = document.getElementById('conSearchInput');
-            if (sInput) sInput.value = '';
-            const dSelect = document.getElementById('conFilterDistrict');
-            if (dSelect) dSelect.value = 'all';
-            const eSelect = document.getElementById('conFilterEntity');
-            if (eSelect) eSelect.value = 'all';
-            const cSelect = document.getElementById('conFilterCast');
-            if (cSelect) cSelect.value = 'all';
-            const sortSelect = document.getElementById('conFilterSort');
-            if (sortSelect) sortSelect.value = 'name_asc';
-
-            contractorMasterPage = 1;
-            loadContractorsMasterList(1);
-            showToast("Contractor filters reset to all.");
-        }
-
-        function changeContractorPage(delta) {
-            const totalPages = Math.max(1, Math.ceil(contractorMasterTotal / contractorMasterLimit));
-            const newPage = contractorMasterPage + delta;
-            if (newPage >= 1 && newPage <= totalPages) {
-                loadContractorsMasterList(newPage);
-            }
-        }
-
-        function changeContractorLimit(newLimit) {
-            contractorMasterLimit = parseInt(newLimit, 10) || 50;
-            contractorMasterPage = 1;
-            loadContractorsMasterList(1);
-        }
-
-        // Add Contractor Modal
-        function openAddContractorModalMaster() {
-            const modal = document.getElementById('modalAddContractorMaster');
-            if (modal) {
-                modal.classList.add('visible');
-                populateContractorDistrictDropdown(contractorMasterDistricts, '');
-            }
-        }
-
-        function closeAddContractorModalMaster() {
-            const modal = document.getElementById('modalAddContractorMaster');
-            if (modal) modal.classList.remove('visible');
-        }
-
-        async function submitAddContractorMaster(e) {
-            e.preventDefault();
-            const payload = {
-                company_name: document.getElementById('addConCompanyName').value.trim(),
-                application_id: document.getElementById('addConAppId').value.trim(),
-                director_name: document.getElementById('addConDirector').value.trim(),
-                mobile: document.getElementById('addConMobile').value.trim(),
-                email: document.getElementById('addConEmail').value.trim(),
-                district: document.getElementById('addConDistrict').value,
-                entity_type: document.getElementById('addConEntity').value,
-                cast: document.getElementById('addConCast').value,
-                pan_no: document.getElementById('addConPan').value.trim(),
-                address: document.getElementById('addConAddress').value.trim(),
-                calling_remarks: document.getElementById('addConRemarks').value.trim()
-            };
-
-            try {
-                const res = await fetch('/api/contractors/create', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast(data.message || "Contractor added successfully!");
-                    closeAddContractorModalMaster();
-                    loadContractorsMasterList(1);
-                } else {
-                    alert("Error adding contractor: " + (data.error || "Unknown error"));
-                }
-            } catch (err) {
-                alert("Network error: " + err.message);
-            }
-        }
-
-        // Edit Contractor Modal
-        async function openEditContractorModalMaster(id) {
-            const contractor = contractorMasterData.find(c => c.id === id);
-            if (!contractor) return;
-
-            document.getElementById('editConId').value = contractor.id;
-            document.getElementById('editConCompanyName').value = contractor.company_name || '';
-            document.getElementById('editConAppId').value = contractor.application_id || '';
-            document.getElementById('editConDirector').value = contractor.director_name || '';
-            document.getElementById('editConMobile').value = contractor.mobile || '';
-            document.getElementById('editConEmail').value = contractor.email || '';
-            document.getElementById('editConDistrict').value = contractor.district || '';
-            document.getElementById('editConEntity').value = contractor.entity_type || 'Individual';
-            document.getElementById('editConCast').value = contractor.cast || 'GEN';
-            document.getElementById('editConPan').value = contractor.pan_no || '';
-            document.getElementById('editConAddress').value = contractor.address || '';
-            document.getElementById('editConRemarks').value = contractor.calling_remarks || contractor.notes || '';
-
-            const modal = document.getElementById('modalEditContractorMaster');
-            if (modal) modal.classList.add('visible');
-        }
-
-        function closeEditContractorModalMaster() {
-            const modal = document.getElementById('modalEditContractorMaster');
-            if (modal) modal.classList.remove('visible');
-        }
-
-        async function submitEditContractorMaster(e) {
-            e.preventDefault();
-            const cid = parseInt(document.getElementById('editConId').value, 10);
-            const payload = {
-                id: cid,
-                company_name: document.getElementById('editConCompanyName').value.trim(),
-                application_id: document.getElementById('editConAppId').value.trim(),
-                director_name: document.getElementById('editConDirector').value.trim(),
-                mobile: document.getElementById('editConMobile').value.trim(),
-                email: document.getElementById('editConEmail').value.trim(),
-                district: document.getElementById('editConDistrict').value,
-                entity_type: document.getElementById('editConEntity').value,
-                cast: document.getElementById('editConCast').value,
-                pan_no: document.getElementById('editConPan').value.trim(),
-                address: document.getElementById('editConAddress').value.trim(),
-                calling_remarks: document.getElementById('editConRemarks').value.trim()
-            };
-
-            try {
-                const res = await fetch('/api/contractors/update', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast("Contractor details updated!");
-                    closeEditContractorModalMaster();
-                    loadContractorsMasterList();
-                } else {
-                    alert("Error updating contractor: " + (data.error || "Unknown error"));
-                }
-            } catch (err) {
-                alert("Network error: " + err.message);
-            }
-        }
-
-        // Delete Contractor
-        async function deleteContractorMaster(id, name) {
-            if (!confirm(`Are you sure you want to delete contractor '${name}' from database?`)) return;
-
-            try {
-                const res = await fetch('/api/contractors/delete', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id })
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast(`Contractor '${name}' deleted.`);
-                    loadContractorsMasterList();
-                } else {
-                    alert("Error deleting contractor: " + (data.error || "Unknown error"));
-                }
-            } catch (err) {
-                alert("Network error: " + err.message);
-            }
-        }
-
-        // Upload Excel Modal
-        function openUploadContractorModalMaster() {
-            const modal = document.getElementById('modalUploadContractorExcel');
-            const statusDiv = document.getElementById('uploadContractorStatus');
-            if (statusDiv) statusDiv.style.display = 'none';
-            if (modal) modal.classList.add('visible');
-        }
-
-        function closeUploadContractorModalMaster() {
-            const modal = document.getElementById('modalUploadContractorExcel');
-            if (modal) modal.classList.remove('visible');
-        }
-
-        async function submitUploadContractorExcel(e) {
-            e.preventDefault();
-            const fileInput = document.getElementById('uploadContractorFileInput');
-            const file = fileInput?.files[0];
-            if (!file) return;
-
-            const btn = document.getElementById('btnSubmitUploadContractor');
-            const statusDiv = document.getElementById('uploadContractorStatus');
-            if (btn) btn.disabled = true;
-            if (statusDiv) {
-                statusDiv.style.display = 'block';
-                statusDiv.style.background = '#eff6ff';
-                statusDiv.style.color = '#1e40af';
-                statusDiv.textContent = `Reading and uploading ${file.name}... Please wait.`;
-            }
-
-            const reader = new FileReader();
-            reader.onload = async function(evt) {
-                const base64Data = evt.target.result.split(',')[1];
-                try {
-                    const res = await fetch('/api/contractors/upload_excel', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            filename: file.name,
-                            file_content_base64: base64Data
-                        })
-                    });
-                    const data = await res.json();
-                    if (data.success) {
-                        statusDiv.style.background = '#f0fdf4';
-                        statusDiv.style.color = '#166534';
-                        statusDiv.textContent = `Success! Scanned ${data.scanned} rows: ${data.added} new contractors added, ${data.updated} updated!`;
-                        showToast(`Imported ${data.total} contractors from Excel!`);
-                        setTimeout(() => {
-                            closeUploadContractorModalMaster();
-                            loadContractorsMasterList(1);
-                        }, 2000);
-                    } else {
-                        statusDiv.style.background = '#fee2e2';
-                        statusDiv.style.color = '#991b1b';
-                        statusDiv.textContent = "Upload failed: " + (data.error || "Format error");
-                    }
-                } catch (uploadErr) {
-                    statusDiv.style.background = '#fee2e2';
-                    statusDiv.style.color = '#991b1b';
-                    statusDiv.textContent = "Network error: " + uploadErr.message;
-                } finally {
-                    if (btn) btn.disabled = false;
-                }
-            };
-            reader.readAsDataURL(file);
-        }
-
-        // Live Google Sheets Sync
-        async function syncContractorGoogleSheetMaster() {
-            if (!confirm("Google Sheets (54,000+ ठेकेदार रिकॉर्ड्स) से लाइव सिंक शुरू करें? इसमें कुछ सेकंड लगेंगे।")) return;
-            showToast("Connecting to Google Sheets & syncing master registry...");
-            try {
-                const res = await fetch('/api/contractors/sync_google_sheet', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast(`Google Sheets Sync Complete: ${data.added} added, ${data.updated} updated across ${data.districts_count} districts!`);
-                    loadContractorsMasterList(1);
-                } else {
-                    alert("Google Sheets Sync failed: " + (data.error || "Unknown error"));
-                }
-            } catch (err) {
-                alert("Google Sheets Sync error: " + err.message);
-            }
-        }
-
-        // Export to Excel
-        function exportContractorsMasterExcel() {
-            const dist = document.getElementById('conFilterDistrict')?.value || 'all';
-            showToast("Generating Contractors Master Excel (.xlsx)... Download will start shortly.");
-            window.location.href = `/api/contractors/export_xlsx?district=${encodeURIComponent(dist)}`;
-        }
-
-        // Match Live Tenders for Contractor
-        function openMatchTendersForContractor(id, district, name) {
-            const contractor = contractorMasterData.find(c => c.id === id);
-            currentMatchingContractor = contractor;
-            const modal = document.getElementById('modalMatchTendersForContractor');
-            const title = document.getElementById('matchTendersModalTitle');
-            const info = document.getElementById('matchTendersHeaderInfo');
-            const tbody = document.getElementById('matchedTendersTableBody');
-
-            if (title) title.innerHTML = `<span>🎯</span> Matching Live Tenders for: <strong>${escapeHtml(name)}</strong>`;
-            if (info) info.innerHTML = `<strong>Contractor:</strong> ${escapeHtml(name)} &bull; <strong>District:</strong> ${escapeHtml(district)} &bull; <strong>Mobile:</strong> ${contractor?.mobile || 'N/A'}`;
-
-            // Combine active Bihar & Central tenders
-            let matched = [];
-            const distLower = (district || '').toLowerCase();
-
-            // Check Bihar active
-            if (typeof biharTenders !== 'undefined' && biharTenders.length > 0) {
-                biharTenders.forEach(t => {
-                    const tDist = (t.district || '').toLowerCase();
-                    if (distLower && (tDist.includes(distLower) || distLower.includes(tDist) || tDist.includes('bihar') || tDist.includes('state-wide'))) {
-                        matched.push({
-                            portal: 'Bihar eProc2',
-                            tid: t.systemTenderNo || t.tenderId,
-                            dept: t.department || 'Bihar Govt',
-                            desc: t.detailedDescription || t.description || 'Civil Works',
-                            pac: t.estimatedValueFormatted || (t.estimatedValue ? `₹ ${t.estimatedValue.toLocaleString()}` : 'Hidden by portal'),
-                            due: t.dueDate || 'Soon',
-                            ref: t.refNo || 'NIT'
-                        });
-                    }
-                });
-            }
-
-            // Check CPP active
-            if (typeof cppTendersData !== 'undefined' && cppTendersData.length > 0) {
-                cppTendersData.forEach(t => {
-                    const tLoc = (t.state_district || '').toLowerCase();
-                    if (distLower && (tLoc.includes(distLower) || distLower.includes(tLoc) || tLoc.includes('bihar'))) {
-                        matched.push({
-                            portal: 'Central CPPP',
-                            tid: t.tender_id || t.canonical_key,
-                            dept: t.department || t.organisation_chain || 'Central Govt',
-                            desc: t.work_description || t.title || 'Central Procurement Notice',
-                            pac: t.tender_value_formatted || (t.tender_value_inr ? `₹ ${t.tender_value_inr.toLocaleString()}` : 'Nil'),
-                            due: t.bid_closing_date || 'Soon',
-                            ref: t.tender_ref_no || '-'
-                        });
-                    }
-                });
-            }
-
-            if (!matched || matched.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">Is ज़िले (${escapeHtml(district)}) me filhal koi live active tender match nahi hua. "Bihar eProc" ya "Central CPPP" se naye tenders pull karein.</td></tr>`;
-            } else {
-                let mHtml = '';
-                matched.slice(0, 30).forEach(m => {
-                    const cleanMob = (contractor?.mobile || '').replace(/[^0-9]/g, '');
-                    const waNum = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
-                    const waMsg = encodeURIComponent(`नमस्ते ${contractor?.contact_person || name} जी, आपके ज़िले (${district}) के लिए नया लाइव टेंडर मिला है:
-
-🏛️ पोर्टल: ${m.portal}
-📄 NIT/Ref: ${m.ref}
-💼 विभाग: ${m.dept}
-💰 PAC वैल्यू: ${m.pac}
-⏰ Due Date: ${m.due}
-📝 कार्य: ${m.desc.slice(0, 100)}...
-
-- TDSC Bidding Support Desk`);
-                    
-                    mHtml += `
-                        <tr style="border-bottom: 1px solid #e2e8f0;">
-                            <td style="padding: 8px;">
-                                <span style="background: ${m.portal === 'Central CPPP' ? '#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;' : '#eff6ff; color: #1e40af; border: 1px solid #bfdbfe;'}; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${m.portal}</span>
-                                <div style="font-family: monospace; font-size: 0.76rem; font-weight: 700; margin-top: 2px;">${escapeHtml(m.tid)}</div>
-                            </td>
-                            <td style="padding: 8px;">
-                                <div style="font-weight: 700; color: #0f172a;">${escapeHtml(m.dept)}</div>
-                                <div style="font-size: 0.76rem; color: #64748b; line-height: 1.3;">${escapeHtml(m.desc.slice(0, 110))}...</div>
-                            </td>
-                            <td style="padding: 8px; text-align: right; font-weight: 700; color: #047857; white-space: nowrap;">
-                                ${escapeHtml(m.pac)}
-                            </td>
-                            <td style="padding: 8px; text-align: center; font-size: 0.76rem; color: #dc2626; font-weight: 700; white-space: nowrap;">
-                                ${escapeHtml(m.due)}
-                            </td>
-                            <td style="padding: 8px; text-align: center;">
-                                <a href="https://api.whatsapp.com/send?phone=${waNum}&text=${waMsg}" target="_blank" class="btn-share btn-whatsapp" style="padding: 3px 10px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
-                                    💬 WhatsApp Send
-                                </a>
-                            </td>
-                        </tr>
-                    `;
-                });
-                tbody.innerHTML = mHtml;
-            }
-
-            if (modal) modal.classList.add('visible');
-        }
-
-        function closeMatchTendersForContractor() {
-            const modal = document.getElementById('modalMatchTendersForContractor');
-            if (modal) modal.classList.remove('visible');
-        }
-
-    </script>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <style>
         :root {
             --primary: #1e3a8a;
@@ -869,7 +261,7 @@
 
         /* Modals */
         .modal-overlay { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.7); backdrop-filter: blur(3px); z-index: 2500; display: none; align-items: center; justify-content: center; padding: 16px; }
-        .modal-overlay.active { display: flex; }
+        .modal-overlay.active, .modal-overlay.visible { display: flex !important; }
         .modal-card { background: white; border-radius: 12px; width: 100%; max-width: 520px; box-shadow: 0 20px 25px -5px rgba(0,0,0,0.3); overflow: hidden; animation: popIn 0.2s ease-out; }
         .modal-card.modal-large { max-width: 820px; }
         @keyframes popIn { from { transform: scale(0.96); opacity: 0; } to { transform: scale(1); opacity: 1; } }
@@ -2201,7 +1593,7 @@
                     <div style="display: grid; grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto; gap: 10px; align-items: end;">
                         <div>
                             <label class="control-label">🔍 Search (नाम, फर्म, मोबाइल, App ID, पैन, पता):</label>
-                            <input type="text" id="conSearchInput" class="input-control" placeholder="Search by Name, Firm, Mobile, App ID, PAN, Remarks..." onkeydown="if(event.key==='Enter') applyContractorMasterFilters(1)">
+                            <input type="text" id="conSearchInput" class="input-control" placeholder="Search by Name, Firm, Mobile, App ID, PAN, Remarks..." oninput="handleContractorSearchDebounced()" onkeydown="if(event.key==='Enter') applyContractorMasterFilters(1)">
                         </div>
                         <div>
                             <label class="control-label">📍 District (ज़िला):</label>
@@ -3117,7 +2509,7 @@
     <!-- ============================================================== -->
 
     <!-- 1. ADD CONTRACTOR MODAL -->
-    <div class="modal-overlay" id="modalAddContractorMaster">
+    <div class="modal-overlay" id="modalAddContractorMaster" onclick="if(event.target===this) closeAddContractorModalMaster()">
         <div class="modal-dialog" style="max-width: 700px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
@@ -3201,7 +2593,7 @@
     </div>
 
     <!-- 2. EDIT CONTRACTOR MODAL -->
-    <div class="modal-overlay" id="modalEditContractorMaster">
+    <div class="modal-overlay" id="modalEditContractorMaster" onclick="if(event.target===this) closeEditContractorModalMaster()">
         <div class="modal-dialog" style="max-width: 700px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
@@ -3286,7 +2678,7 @@
     </div>
 
     <!-- 3. UPLOAD EXCEL / CSV MODAL -->
-    <div class="modal-overlay" id="modalUploadContractorExcel">
+    <div class="modal-overlay" id="modalUploadContractorExcel" onclick="if(event.target===this) closeUploadContractorModalMaster()">
         <div class="modal-dialog" style="max-width: 550px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
@@ -3311,7 +2703,7 @@
     </div>
 
     <!-- 4. MATCH TENDERS FOR CONTRACTOR MODAL -->
-    <div class="modal-overlay" id="modalMatchTendersForContractor">
+    <div class="modal-overlay" id="modalMatchTendersForContractor" onclick="if(event.target===this) closeMatchTendersForContractor()">
         <div class="modal-dialog" style="max-width: 850px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 id="matchTendersModalTitle" style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
@@ -8307,6 +7699,614 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             } else {
                 openSuggestModalForTender(t.tenderId || t.tender_id);
             }
+        }
+
+
+        let conSearchDebounceTimer = null;
+        function handleContractorSearchDebounced() {
+            clearTimeout(conSearchDebounceTimer);
+            conSearchDebounceTimer = setTimeout(() => {
+                applyContractorMasterFilters(1);
+            }, 300);
+        }
+
+
+        // ==============================================================
+        // CONTRACTOR MASTER DATABASE & CRM CONTROLLER (54,680+ RECORDS)
+        // ==============================================================
+        let contractorMasterData = [];
+        let contractorMasterPage = 1;
+        let contractorMasterLimit = 50;
+        let contractorMasterTotal = 0;
+        let contractorMasterDistricts = [];
+        let currentMatchingContractor = null;
+
+        async function loadContractorsMasterList(page = null) {
+            if (page !== null) contractorMasterPage = page;
+            const searchVal = (document.getElementById('conSearchInput')?.value || '').trim();
+            const districtVal = document.getElementById('conFilterDistrict')?.value || 'all';
+            const entityVal = document.getElementById('conFilterEntity')?.value || 'all';
+            const castVal = document.getElementById('conFilterCast')?.value || 'all';
+            const sortVal = document.getElementById('conFilterSort')?.value || 'name_asc';
+
+            const tbody = document.getElementById('contractorMasterTableBody');
+            if (tbody) {
+                tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #1e3a8a;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading contractors from database...</td></tr>`;
+            }
+
+            try {
+                const queryParams = new URLSearchParams({
+                    q: searchVal,
+                    district: districtVal,
+                    entity_type: entityVal,
+                    cast: castVal,
+                    sort: sortVal,
+                    page: String(contractorMasterPage),
+                    limit: String(contractorMasterLimit)
+                });
+
+                const resp = await fetch(`/api/contractors?${queryParams.toString()}`);
+                if (!resp.ok) throw new Error("API failed");
+                const data = await resp.json();
+
+                contractorMasterData = data.contractors || [];
+                contractorMasterTotal = data.total || 0;
+                contractorMasterDistricts = data.districts || [];
+
+                // Populate District dropdown if not populated
+                populateContractorDistrictDropdown(contractorMasterDistricts, districtVal);
+
+                // Update Stats
+                const stats = data.stats || {};
+                const statTot = document.getElementById('statConTotalCount');
+                if (statTot) statTot.textContent = (stats.total_contractors || contractorMasterTotal).toLocaleString();
+                const statMob = document.getElementById('statConMobileCount');
+                if (statMob) statMob.textContent = (stats.verified_mobiles || 51877).toLocaleString();
+                const statDist = document.getElementById('statConDistrictsCount');
+                if (statDist) statDist.textContent = (stats.districts_count || contractorMasterDistricts.length || 38).toLocaleString();
+
+                // Results Badge
+                const startIdx = contractorMasterTotal === 0 ? 0 : (contractorMasterPage - 1) * contractorMasterLimit + 1;
+                const endIdx = Math.min(contractorMasterPage * contractorMasterLimit, contractorMasterTotal);
+                const badge = document.getElementById('conResultsCountBadge');
+                if (badge) {
+                    badge.textContent = `Showing ${startIdx} to ${endIdx} of ${contractorMasterTotal.toLocaleString()} Contractors`;
+                }
+
+                // Render Table Rows
+                renderContractorMasterTableRows(contractorMasterData, startIdx);
+
+                // Update Pagination Controls
+                const totalPages = Math.max(1, Math.ceil(contractorMasterTotal / contractorMasterLimit));
+                const pageInfo = document.getElementById('conPaginationInfo');
+                if (pageInfo) pageInfo.textContent = `Page ${contractorMasterPage} of ${totalPages} (${contractorMasterTotal.toLocaleString()} total)`;
+                const curPageNum = document.getElementById('conCurrentPageNum');
+                if (curPageNum) curPageNum.textContent = `${contractorMasterPage}`;
+                
+                const btnPrev = document.getElementById('btnConPrevPage');
+                if (btnPrev) btnPrev.disabled = contractorMasterPage <= 1;
+                const btnNext = document.getElementById('btnConNextPage');
+                if (btnNext) btnNext.disabled = contractorMasterPage >= totalPages;
+
+            } catch (err) {
+                console.error("Error loading contractors master:", err);
+                if (tbody) {
+                    tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #dc2626;">Error loading contractors database. Please verify local server is running.</td></tr>`;
+                }
+            }
+        }
+
+        function populateContractorDistrictDropdown(districts, selectedDist) {
+            const select = document.getElementById('conFilterDistrict');
+            const addSelect = document.getElementById('addConDistrict');
+            const editSelect = document.getElementById('editConDistrict');
+            if (!select || select.options.length > 5) return;
+
+            const standard38 = [
+                'Araria', 'Arwal', 'Aurangabad', 'Banka', 'Begusarai', 'Bhagalpur', 'Bhojpur', 'Buxar',
+                'Darbhanga', 'East Champaran', 'Gaya', 'Gopalganj', 'Jamui', 'Jehanabad', 'Kaimur (Bhabua)',
+                'Katihar', 'Khagaria', 'Kishanganj', 'Lakhisarai', 'Madhepura', 'Madhubani', 'Munger',
+                'Muzaffarpur', 'Nalanda', 'Nawada', 'Patna', 'Purnia', 'Rohtas', 'Saharsa', 'Samastipur',
+                'Saran', 'Sheikhpura', 'Sheohar', 'Sitamarhi', 'Siwan', 'Supaul', 'Vaishali', 'West Champaran'
+            ];
+
+            const allDists = Array.from(new Set([...standard38, ...districts])).sort();
+            
+            // Filter dropdown
+            select.innerHTML = '<option value="all">All Districts (सभी 38 ज़िले)</option>';
+            allDists.forEach(d => {
+                const opt = document.createElement('option');
+                opt.value = d;
+                opt.textContent = d;
+                select.appendChild(opt);
+            });
+            if (selectedDist) select.value = selectedDist;
+
+            // Add modal dropdown
+            if (addSelect && addSelect.options.length <= 1) {
+                addSelect.innerHTML = '<option value="">Select District</option>';
+                allDists.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    addSelect.appendChild(opt);
+                });
+            }
+
+            // Edit modal dropdown
+            if (editSelect && editSelect.options.length <= 1) {
+                editSelect.innerHTML = '<option value="">Select District</option>';
+                allDists.forEach(d => {
+                    const opt = document.createElement('option');
+                    opt.value = d;
+                    opt.textContent = d;
+                    editSelect.appendChild(opt);
+                });
+            }
+        }
+
+        function renderContractorMasterTableRows(contractors, startIdx) {
+            const tbody = document.getElementById('contractorMasterTableBody');
+            if (!tbody) return;
+
+            if (!contractors || contractors.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="13" style="text-align: center; padding: 40px; color: #64748b;">
+                            <div style="font-size: 1.8rem; margin-bottom: 6px;">🔍</div>
+                            <strong>Koi thekedar match nahi hua.</strong>
+                            <div style="font-size: 0.8rem; margin-top: 4px; color: #94a3b8;">Search keyword ya district filter badal kar check karein.</div>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            let html = '';
+            contractors.forEach((c, i) => {
+                const slNo = startIdx + i;
+                const appId = c.application_id || c.contractor_id || ('CON-' + c.id);
+                const firm = c.company_name || 'Individual Contractor';
+                const director = c.director_name || c.contact_person || '-';
+                const dist = c.district || 'Bihar';
+                const mobile = c.mobile || '';
+                const email = c.email || '-';
+                const entity = c.entity_type || 'Individual';
+                const cast = c.cast || 'GEN';
+                const pan = c.pan_no || '-';
+                const addr = c.address || '-';
+                const remarks = c.calling_remarks || c.notes || '-';
+
+                // Clean 10 digit mobile for whatsapp
+                let waButton = '';
+                let callLink = '<span style="color: #94a3b8;">-</span>';
+                if (mobile) {
+                    const cleanMob = mobile.replace(/[^0-9]/g, '');
+                    const waNum = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
+                    const waText = encodeURIComponent(`नमस्ते ${director || firm} जी, TDSC Bidding Support Desk से हम आपके लिए Bihar eProcurement और Central CPPP के नए टेंडर विवरण साझा करना चाहते हैं।`);
+                    waButton = `<a href="https://api.whatsapp.com/send?phone=${waNum}&text=${waText}" target="_blank" class="btn-share btn-whatsapp" style="padding: 2px 8px; font-size: 0.72rem; margin-top: 3px; display: inline-flex; align-items: center; gap: 4px; text-decoration: none;">💬 WhatsApp</a>`;
+                    callLink = `<a href="tel:${mobile}" style="color: #1e3a8a; font-weight: 700; text-decoration: none;">📞 ${escapeHtml(mobile)}</a>`;
+                }
+
+                html += `
+                    <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.83rem;">
+                        <td style="text-align: center; font-weight: 700; color: #64748b;">${slNo}</td>
+                        <td style="text-align: center; font-family: monospace; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
+                            <span style="background: #eff6ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #bfdbfe;">${escapeHtml(appId)}</span>
+                        </td>
+                        <td style="font-weight: 800; color: #0f172a; max-width: 220px;">
+                            ${escapeHtml(firm)}
+                        </td>
+                        <td style="color: #334155; font-weight: 600;">
+                            ${escapeHtml(director)}
+                        </td>
+                        <td style="text-align: center;">
+                            <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.76rem; white-space: nowrap;">
+                                📍 ${escapeHtml(dist)}
+                            </span>
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <div>${callLink}</div>
+                            ${waButton}
+                        </td>
+                        <td style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
+                            ${escapeHtml(email)}
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <span style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #475569;">${escapeHtml(entity)}</span>
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <span style="background: #fefce8; border: 1px solid #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${escapeHtml(cast)}</span>
+                        </td>
+                        <td style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
+                            ${escapeHtml(addr.length > 70 ? addr.substring(0, 70) + '...' : addr)}
+                        </td>
+                        <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
+                            ${escapeHtml(pan)}
+                        </td>
+                        <td style="font-size: 0.76rem; color: #b45309; font-weight: 600; max-width: 170px;" title="${escapeHtml(remarks)}">
+                            ${escapeHtml(remarks !== '-' ? '📝 ' + remarks : '-')}
+                        </td>
+                        <td style="text-align: center; white-space: nowrap;">
+                            <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
+                                <button class="btn-top" onclick="openMatchTendersForContractor(${c.id}, '${escapeJsString(dist)}', '${escapeJsString(firm)}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Match Live Tenders in this Contractor's District">
+                                    🎯 Match
+                                </button>
+                                <button class="btn-top" onclick="openEditContractorModalMaster(${c.id})" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Edit Contractor Details">
+                                    ✏️
+                                </button>
+                                <button class="btn-top" onclick="deleteContractorMaster(${c.id}, '${escapeJsString(firm)}')" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Delete Contractor">
+                                    🗑️
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            tbody.innerHTML = html;
+        }
+
+        function applyContractorMasterFilters(page = 1) {
+            loadContractorsMasterList(page);
+        }
+
+        function resetContractorFilters() {
+            const sInput = document.getElementById('conSearchInput');
+            if (sInput) sInput.value = '';
+            const dSelect = document.getElementById('conFilterDistrict');
+            if (dSelect) dSelect.value = 'all';
+            const eSelect = document.getElementById('conFilterEntity');
+            if (eSelect) eSelect.value = 'all';
+            const cSelect = document.getElementById('conFilterCast');
+            if (cSelect) cSelect.value = 'all';
+            const sortSelect = document.getElementById('conFilterSort');
+            if (sortSelect) sortSelect.value = 'name_asc';
+
+            contractorMasterPage = 1;
+            loadContractorsMasterList(1);
+            showToast("Contractor filters reset to all.");
+        }
+
+        function changeContractorPage(delta) {
+            const totalPages = Math.max(1, Math.ceil(contractorMasterTotal / contractorMasterLimit));
+            const newPage = contractorMasterPage + delta;
+            if (newPage >= 1 && newPage <= totalPages) {
+                loadContractorsMasterList(newPage);
+            }
+        }
+
+        function changeContractorLimit(newLimit) {
+            contractorMasterLimit = parseInt(newLimit, 10) || 50;
+            contractorMasterPage = 1;
+            loadContractorsMasterList(1);
+        }
+
+        // Add Contractor Modal
+        function openAddContractorModalMaster() {
+            const modal = document.getElementById('modalAddContractorMaster');
+            if (modal) {
+                modal.classList.add('active'); modal.classList.add('visible');
+                populateContractorDistrictDropdown(contractorMasterDistricts, '');
+            }
+        }
+
+        function closeAddContractorModalMaster() {
+            const modal = document.getElementById('modalAddContractorMaster');
+            if (modal) modal.classList.remove('active'); modal.classList.remove('visible');
+        }
+
+        async function submitAddContractorMaster(e) {
+            e.preventDefault();
+            const payload = {
+                company_name: document.getElementById('addConCompanyName').value.trim(),
+                application_id: document.getElementById('addConAppId').value.trim(),
+                director_name: document.getElementById('addConDirector').value.trim(),
+                mobile: document.getElementById('addConMobile').value.trim(),
+                email: document.getElementById('addConEmail').value.trim(),
+                district: document.getElementById('addConDistrict').value,
+                entity_type: document.getElementById('addConEntity').value,
+                cast: document.getElementById('addConCast').value,
+                pan_no: document.getElementById('addConPan').value.trim(),
+                address: document.getElementById('addConAddress').value.trim(),
+                calling_remarks: document.getElementById('addConRemarks').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/contractors/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || "Contractor added successfully!");
+                    closeAddContractorModalMaster();
+                    loadContractorsMasterList(1);
+                } else {
+                    alert("Error adding contractor: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error: " + err.message);
+            }
+        }
+
+        // Edit Contractor Modal
+        async function openEditContractorModalMaster(id) {
+            const contractor = contractorMasterData.find(c => c.id === id);
+            if (!contractor) return;
+
+            document.getElementById('editConId').value = contractor.id;
+            document.getElementById('editConCompanyName').value = contractor.company_name || '';
+            document.getElementById('editConAppId').value = contractor.application_id || '';
+            document.getElementById('editConDirector').value = contractor.director_name || '';
+            document.getElementById('editConMobile').value = contractor.mobile || '';
+            document.getElementById('editConEmail').value = contractor.email || '';
+            document.getElementById('editConDistrict').value = contractor.district || '';
+            document.getElementById('editConEntity').value = contractor.entity_type || 'Individual';
+            document.getElementById('editConCast').value = contractor.cast || 'GEN';
+            document.getElementById('editConPan').value = contractor.pan_no || '';
+            document.getElementById('editConAddress').value = contractor.address || '';
+            document.getElementById('editConRemarks').value = contractor.calling_remarks || contractor.notes || '';
+
+            const modal = document.getElementById('modalEditContractorMaster');
+            if (modal) modal.classList.add('active'); modal.classList.add('visible');
+        }
+
+        function closeEditContractorModalMaster() {
+            const modal = document.getElementById('modalEditContractorMaster');
+            if (modal) modal.classList.remove('active'); modal.classList.remove('visible');
+        }
+
+        async function submitEditContractorMaster(e) {
+            e.preventDefault();
+            const cid = parseInt(document.getElementById('editConId').value, 10);
+            const payload = {
+                id: cid,
+                company_name: document.getElementById('editConCompanyName').value.trim(),
+                application_id: document.getElementById('editConAppId').value.trim(),
+                director_name: document.getElementById('editConDirector').value.trim(),
+                mobile: document.getElementById('editConMobile').value.trim(),
+                email: document.getElementById('editConEmail').value.trim(),
+                district: document.getElementById('editConDistrict').value,
+                entity_type: document.getElementById('editConEntity').value,
+                cast: document.getElementById('editConCast').value,
+                pan_no: document.getElementById('editConPan').value.trim(),
+                address: document.getElementById('editConAddress').value.trim(),
+                calling_remarks: document.getElementById('editConRemarks').value.trim()
+            };
+
+            try {
+                const res = await fetch('/api/contractors/update', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast("Contractor details updated!");
+                    closeEditContractorModalMaster();
+                    loadContractorsMasterList();
+                } else {
+                    alert("Error updating contractor: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error: " + err.message);
+            }
+        }
+
+        // Delete Contractor
+        async function deleteContractorMaster(id, name) {
+            if (!confirm(`Are you sure you want to delete contractor '${name}' from database?`)) return;
+
+            try {
+                const res = await fetch('/api/contractors/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Contractor '${name}' deleted.`);
+                    loadContractorsMasterList();
+                } else {
+                    alert("Error deleting contractor: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error: " + err.message);
+            }
+        }
+
+        // Upload Excel Modal
+        function openUploadContractorModalMaster() {
+            const modal = document.getElementById('modalUploadContractorExcel');
+            const statusDiv = document.getElementById('uploadContractorStatus');
+            if (statusDiv) statusDiv.style.display = 'none';
+            if (modal) modal.classList.add('active'); modal.classList.add('visible');
+        }
+
+        function closeUploadContractorModalMaster() {
+            const modal = document.getElementById('modalUploadContractorExcel');
+            if (modal) modal.classList.remove('active'); modal.classList.remove('visible');
+        }
+
+        async function submitUploadContractorExcel(e) {
+            e.preventDefault();
+            const fileInput = document.getElementById('uploadContractorFileInput');
+            const file = fileInput?.files[0];
+            if (!file) return;
+
+            const btn = document.getElementById('btnSubmitUploadContractor');
+            const statusDiv = document.getElementById('uploadContractorStatus');
+            if (btn) btn.disabled = true;
+            if (statusDiv) {
+                statusDiv.style.display = 'block';
+                statusDiv.style.background = '#eff6ff';
+                statusDiv.style.color = '#1e40af';
+                statusDiv.textContent = `Reading and uploading ${file.name}... Please wait.`;
+            }
+
+            const reader = new FileReader();
+            reader.onload = async function(evt) {
+                const base64Data = evt.target.result.split(',')[1];
+                try {
+                    const res = await fetch('/api/contractors/upload_excel', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            filename: file.name,
+                            file_content_base64: base64Data
+                        })
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                        statusDiv.style.background = '#f0fdf4';
+                        statusDiv.style.color = '#166534';
+                        statusDiv.textContent = `Success! Scanned ${data.scanned} rows: ${data.added} new contractors added, ${data.updated} updated!`;
+                        showToast(`Imported ${data.total} contractors from Excel!`);
+                        setTimeout(() => {
+                            closeUploadContractorModalMaster();
+                            loadContractorsMasterList(1);
+                        }, 2000);
+                    } else {
+                        statusDiv.style.background = '#fee2e2';
+                        statusDiv.style.color = '#991b1b';
+                        statusDiv.textContent = "Upload failed: " + (data.error || "Format error");
+                    }
+                } catch (uploadErr) {
+                    statusDiv.style.background = '#fee2e2';
+                    statusDiv.style.color = '#991b1b';
+                    statusDiv.textContent = "Network error: " + uploadErr.message;
+                } finally {
+                    if (btn) btn.disabled = false;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Live Google Sheets Sync
+        async function syncContractorGoogleSheetMaster() {
+            if (!confirm("Google Sheets (54,000+ ठेकेदार रिकॉर्ड्स) से लाइव सिंक शुरू करें? इसमें कुछ सेकंड लगेंगे।")) return;
+            showToast("Connecting to Google Sheets & syncing master registry...");
+            try {
+                const res = await fetch('/api/contractors/sync_google_sheet', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(`Google Sheets Sync Complete: ${data.added} added, ${data.updated} updated across ${data.districts_count} districts!`);
+                    loadContractorsMasterList(1);
+                } else {
+                    alert("Google Sheets Sync failed: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Google Sheets Sync error: " + err.message);
+            }
+        }
+
+        // Export to Excel
+        function exportContractorsMasterExcel() {
+            const dist = document.getElementById('conFilterDistrict')?.value || 'all';
+            showToast("Generating Contractors Master Excel (.xlsx)... Download will start shortly.");
+            window.location.href = `/api/contractors/export_xlsx?district=${encodeURIComponent(dist)}`;
+        }
+
+        // Match Live Tenders for Contractor
+        function openMatchTendersForContractor(id, district, name) {
+            const contractor = contractorMasterData.find(c => c.id === id);
+            currentMatchingContractor = contractor;
+            const modal = document.getElementById('modalMatchTendersForContractor');
+            const title = document.getElementById('matchTendersModalTitle');
+            const info = document.getElementById('matchTendersHeaderInfo');
+            const tbody = document.getElementById('matchedTendersTableBody');
+
+            if (title) title.innerHTML = `<span>🎯</span> Matching Live Tenders for: <strong>${escapeHtml(name)}</strong>`;
+            if (info) info.innerHTML = `<strong>Contractor:</strong> ${escapeHtml(name)} &bull; <strong>District:</strong> ${escapeHtml(district)} &bull; <strong>Mobile:</strong> ${contractor?.mobile || 'N/A'}`;
+
+            // Combine active Bihar & Central tenders
+            let matched = [];
+            const distLower = (district || '').toLowerCase();
+
+            // Check Bihar active
+            if (typeof biharTenders !== 'undefined' && biharTenders.length > 0) {
+                biharTenders.forEach(t => {
+                    const tDist = (t.district || '').toLowerCase();
+                    if (distLower && (tDist.includes(distLower) || distLower.includes(tDist) || tDist.includes('bihar') || tDist.includes('state-wide'))) {
+                        matched.push({
+                            portal: 'Bihar eProc2',
+                            tid: t.systemTenderNo || t.tenderId,
+                            dept: t.department || 'Bihar Govt',
+                            desc: t.detailedDescription || t.description || 'Civil Works',
+                            pac: t.estimatedValueFormatted || (t.estimatedValue ? `₹ ${t.estimatedValue.toLocaleString()}` : 'Hidden by portal'),
+                            due: t.dueDate || 'Soon',
+                            ref: t.refNo || 'NIT'
+                        });
+                    }
+                });
+            }
+
+            // Check CPP active
+            if (typeof cppTendersData !== 'undefined' && cppTendersData.length > 0) {
+                cppTendersData.forEach(t => {
+                    const tLoc = (t.state_district || '').toLowerCase();
+                    if (distLower && (tLoc.includes(distLower) || distLower.includes(tLoc) || tLoc.includes('bihar'))) {
+                        matched.push({
+                            portal: 'Central CPPP',
+                            tid: t.tender_id || t.canonical_key,
+                            dept: t.department || t.organisation_chain || 'Central Govt',
+                            desc: t.work_description || t.title || 'Central Procurement Notice',
+                            pac: t.tender_value_formatted || (t.tender_value_inr ? `₹ ${t.tender_value_inr.toLocaleString()}` : 'Nil'),
+                            due: t.bid_closing_date || 'Soon',
+                            ref: t.tender_ref_no || '-'
+                        });
+                    }
+                });
+            }
+
+            if (!matched || matched.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">Is ज़िले (${escapeHtml(district)}) me filhal koi live active tender match nahi hua. "Bihar eProc" ya "Central CPPP" se naye tenders pull karein.</td></tr>`;
+            } else {
+                let mHtml = '';
+                matched.slice(0, 30).forEach(m => {
+                    const cleanMob = (contractor?.mobile || '').replace(/[^0-9]/g, '');
+                    const waNum = cleanMob.length === 10 ? '91' + cleanMob : cleanMob;
+                    const waMsg = encodeURIComponent(`नमस्ते ${contractor?.contact_person || name} जी, आपके ज़िले (${district}) के लिए नया लाइव टेंडर मिला है:\n\n🏛️ पोर्टल: ${m.portal}\n📄 NIT/Ref: ${m.ref}\n💼 विभाग: ${m.dept}\n💰 PAC वैल्यू: ${m.pac}\n⏰ Due Date: ${m.due}\n📝 कार्य: ${m.desc.slice(0, 100)}...\n\n- TDSC Bidding Support Desk`);
+                    
+                    mHtml += `
+                        <tr style="border-bottom: 1px solid #e2e8f0;">
+                            <td style="padding: 8px;">
+                                <span style="background: ${m.portal === 'Central CPPP' ? '#ecfdf5; color: #065f46; border: 1px solid #a7f3d0;' : '#eff6ff; color: #1e40af; border: 1px solid #bfdbfe;'}; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${m.portal}</span>
+                                <div style="font-family: monospace; font-size: 0.76rem; font-weight: 700; margin-top: 2px;">${escapeHtml(m.tid)}</div>
+                            </td>
+                            <td style="padding: 8px;">
+                                <div style="font-weight: 700; color: #0f172a;">${escapeHtml(m.dept)}</div>
+                                <div style="font-size: 0.76rem; color: #64748b; line-height: 1.3;">${escapeHtml(m.desc.slice(0, 110))}...</div>
+                            </td>
+                            <td style="padding: 8px; text-align: right; font-weight: 700; color: #047857; white-space: nowrap;">
+                                ${escapeHtml(m.pac)}
+                            </td>
+                            <td style="padding: 8px; text-align: center; font-size: 0.76rem; color: #dc2626; font-weight: 700; white-space: nowrap;">
+                                ${escapeHtml(m.due)}
+                            </td>
+                            <td style="padding: 8px; text-align: center;">
+                                <a href="https://api.whatsapp.com/send?phone=${waNum}&text=${waMsg}" target="_blank" class="btn-share btn-whatsapp" style="padding: 3px 10px; font-size: 0.75rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                                    💬 WhatsApp Send
+                                </a>
+                            </td>
+                        </tr>
+                    `;
+                });
+                tbody.innerHTML = mHtml;
+            }
+
+            if (modal) modal.classList.add('active'); modal.classList.add('visible');
+        }
+
+        function closeMatchTendersForContractor() {
+            const modal = document.getElementById('modalMatchTendersForContractor');
+            if (modal) modal.classList.remove('active'); modal.classList.remove('visible');
         }
 
 </script>

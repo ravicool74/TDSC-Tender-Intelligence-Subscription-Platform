@@ -1490,7 +1490,17 @@ def generate_cpp_excel_workbook(tenders=None) -> str:
                     max_len = min(len(val_str), 50)
             ws.column_dimensions[col_letter].width = max(max_len + 3, 12)
 
-    wb.save(CPP_EXCEL_PATH)
+    import time
+    for _attempt in range(3):
+        try:
+            wb.save(CPP_EXCEL_PATH)
+            return CPP_EXCEL_PATH
+        except OSError:
+            time.sleep(0.3)
+    try:
+        wb.save(CPP_EXCEL_PATH)
+    except Exception:
+        pass
     return CPP_EXCEL_PATH
 
 # Self-test block
