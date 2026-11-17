@@ -1617,15 +1617,17 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_json({"success": False, "error": str(e)}, status=500)
             return
 
-        # 11g. Staff / Admin: Delete Contractor
+        # 11g. Staff / Admin: Delete Contractor (Single or Batch)
         elif path == '/api/contractors/delete':
             try:
                 body = self.read_json_body()
                 cid = body.get('id')
-                if not cid:
-                    self.send_json({"success": False, "error": "Contractor ID required."}, status=400)
+                cids = body.get('ids')
+                target = cids if cids is not None else cid
+                if target is None or target == '':
+                    self.send_json({"success": False, "error": "Contractor ID or IDs list required."}, status=400)
                     return
-                res = contractor_crm_manager.delete_contractor_entry(cid)
+                res = contractor_crm_manager.delete_contractor_entry(target)
                 self.send_json(res)
             except Exception as e:
                 self.send_json({"success": False, "error": str(e)}, status=500)

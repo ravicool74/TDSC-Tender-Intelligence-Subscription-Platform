@@ -1643,11 +1643,34 @@
 
                 <!-- Results Info Bar & Pagination Top -->
                 <div class="results-bar" style="margin-bottom: 8px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <span class="results-count-badge" id="conResultsCountBadge" style="background: #1e3a8a;">Showing 0 of 0 Contractors</span>
-                        <span style="font-size: 0.8rem; color: #64748b;">👈 Scroll horizontally to see all fields, PAN, Remarks &amp; 1-click WhatsApp buttons.</span>
+                        <button id="conBtnDeleteSelected" onclick="deleteSelectedContractorRows()" class="btn-top" style="display: none; background: #dc2626; color: white; border-color: #b91c1c; font-size: 0.8rem; padding: 4px 10px; border-radius: 6px; font-weight: 700; align-items: center; gap: 5px; cursor: pointer;">
+                            🗑️ Delete Selected (<span id="conSelectedCount">0</span>)
+                        </button>
+                        <span style="font-size: 0.8rem; color: #64748b;">👈 Scroll horizontally • Click [×] on any header to hide/delete column</span>
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <!-- Column Manager Dropdown -->
+                        <div style="position: relative; display: inline-block;">
+                            <button class="btn-top" id="btnToggleConCols" onclick="toggleContractorColumnDropdown(event)" style="background: #f8fafc; color: #1e3a8a; border-color: #93c5fd; font-weight: 700; padding: 5px 12px; font-size: 0.82rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                ⚙️ Columns (कॉलम सेटिंग्स / छुपाएं) ▾
+                            </button>
+                            <div id="conColumnsDropdown" style="display: none; position: absolute; right: 0; top: 38px; background: white; border: 1.5px solid #cbd5e1; border-radius: 8px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15); width: 280px; z-index: 1050; padding: 12px;">
+                                <div style="font-weight: 800; color: #1e3a8a; font-size: 0.85rem; margin-bottom: 8px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; display: flex; justify-content: space-between; align-items: center;">
+                                    <span>⚙️ Column Visibility</span>
+                                    <button onclick="closeContractorColumnDropdown()" style="background: none; border: none; font-size: 16px; cursor: pointer; color: #64748b;">&times;</button>
+                                </div>
+                                <div id="conColCheckboxesList" style="max-height: 250px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; margin-bottom: 10px;">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                                <div style="display: flex; justify-content: space-between; border-top: 1px solid #e2e8f0; padding-top: 8px;">
+                                    <button onclick="showAllContractorColumns()" style="background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; border-radius: 4px; padding: 3px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">👁️ Show All</button>
+                                    <button onclick="resetDefaultContractorColumns()" style="background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 8px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">🔄 Reset</button>
+                                </div>
+                            </div>
+                        </div>
+
                         <label style="font-size: 0.8rem; font-weight: 700; color: #475569;">Rows per page:</label>
                         <select id="conPageLimitSelect" class="input-control" style="width: 80px; padding: 4px 8px; height: 32px;" onchange="changeContractorLimit(this.value)">
                             <option value="25">25</option>
@@ -1658,30 +1681,31 @@
                     </div>
                 </div>
 
-                <!-- 12-Column Responsive Data Table -->
+                <!-- 13-Column Responsive Data Table with Checkbox & Show/Hide Controls -->
                 <div class="table-scroll-wrapper" style="max-height: 68vh;">
                     <table class="data-table" id="contractorMasterTable">
                         <thead>
                             <tr style="background: #1e3a8a; color: white;">
-                                <th style="width: 50px; text-align: center;">SL.</th>
-                                <th style="width: 140px; text-align: center;">ApplicationID</th>
-                                <th style="min-width: 200px;">Applicant / Firm / Company Name</th>
-                                <th style="min-width: 160px;">Applicant Father / Director Name</th>
-                                <th style="width: 90px; text-align: center;">DoB/DoA</th>
-                                <th style="min-width: 220px;">Address</th>
-                                <th style="width: 120px; text-align: center;">District</th>
-                                <th style="width: 80px; text-align: center;">Cast</th>
-                                <th style="width: 80px; text-align: center;">Gender</th>
-                                <th style="min-width: 180px;">Email ID</th>
-                                <th style="width: 130px; text-align: center;">Entity Type</th>
-                                <th style="width: 160px; text-align: center;">Mobile No</th>
-                                <th style="width: 110px; text-align: center;">PAN No</th>
-                                <th style="width: 150px; text-align: center;">⚡ Actions</th>
+                                <th class="col-chk" style="width: 38px; text-align: center;"><input type="checkbox" id="chkConSelectAll" onchange="toggleSelectAllContractorRows(this.checked)" title="Select All Rows"></th>
+                                <th class="col-sl" style="width: 50px; text-align: center;"><div class="th-content"><span>SL.</span><button class="btn-hide-col" onclick="toggleContractorColumn('sl', false)" title="Hide column">×</button></div></th>
+                                <th class="col-appid" style="width: 140px; text-align: center;"><div class="th-content"><span>ApplicationID</span><button class="btn-hide-col" onclick="toggleContractorColumn('appid', false)" title="Hide column">×</button></div></th>
+                                <th class="col-company" style="min-width: 200px;"><div class="th-content"><span>Applicant / Firm / Company Name</span><button class="btn-hide-col" onclick="toggleContractorColumn('company', false)" title="Hide column">×</button></div></th>
+                                <th class="col-director" style="min-width: 160px;"><div class="th-content"><span>Applicant Father / Director Name</span><button class="btn-hide-col" onclick="toggleContractorColumn('director', false)" title="Hide column">×</button></div></th>
+                                <th class="col-dob" style="width: 90px; text-align: center;"><div class="th-content"><span>DoB/DoA</span><button class="btn-hide-col" onclick="toggleContractorColumn('dob', false)" title="Hide column">×</button></div></th>
+                                <th class="col-address" style="min-width: 220px;"><div class="th-content"><span>Address</span><button class="btn-hide-col" onclick="toggleContractorColumn('address', false)" title="Hide column">×</button></div></th>
+                                <th class="col-district" style="width: 120px; text-align: center;"><div class="th-content"><span>District</span><button class="btn-hide-col" onclick="toggleContractorColumn('district', false)" title="Hide column">×</button></div></th>
+                                <th class="col-cast" style="width: 80px; text-align: center;"><div class="th-content"><span>Cast</span><button class="btn-hide-col" onclick="toggleContractorColumn('cast', false)" title="Hide column">×</button></div></th>
+                                <th class="col-gender" style="width: 80px; text-align: center;"><div class="th-content"><span>Gender</span><button class="btn-hide-col" onclick="toggleContractorColumn('gender', false)" title="Hide column">×</button></div></th>
+                                <th class="col-email" style="min-width: 180px;"><div class="th-content"><span>Email ID</span><button class="btn-hide-col" onclick="toggleContractorColumn('email', false)" title="Hide column">×</button></div></th>
+                                <th class="col-entity" style="width: 130px; text-align: center;"><div class="th-content"><span>Entity Type</span><button class="btn-hide-col" onclick="toggleContractorColumn('entity', false)" title="Hide column">×</button></div></th>
+                                <th class="col-mobile" style="width: 160px; text-align: center;"><div class="th-content"><span>Mobile No</span><button class="btn-hide-col" onclick="toggleContractorColumn('mobile', false)" title="Hide column">×</button></div></th>
+                                <th class="col-pan" style="width: 110px; text-align: center;"><div class="th-content"><span>PAN No</span><button class="btn-hide-col" onclick="toggleContractorColumn('pan', false)" title="Hide column">×</button></div></th>
+                                <th class="col-actions" style="width: 150px; text-align: center;"><div class="th-content"><span>⚡ Actions</span><button class="btn-hide-col" onclick="toggleContractorColumn('actions', false)" title="Hide column">×</button></div></th>
                             </tr>
                         </thead>
                         <tbody id="contractorMasterTableBody">
                             <tr>
-                                <td colspan="13" style="text-align: center; padding: 40px; color: #64748b;">
+                                <td colspan="15" style="text-align: center; padding: 40px; color: #64748b;">
                                     Loading contractors database...
                                 </td>
                             </tr>
@@ -2511,7 +2535,7 @@
 
     <!-- 1. ADD CONTRACTOR MODAL -->
     <div class="modal-overlay" id="modalAddContractorMaster" onclick="if(event.target===this) closeAddContractorModalMaster()">
-        <div class="modal-dialog" style="max-width: 700px;">
+        <div class="modal-dialog" style="max-width: 720px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
                     <span>➕</span> Add New Contractor (नया ठेकेदार जोड़ें)
@@ -2535,19 +2559,33 @@
                         <input type="text" id="addConDirector" class="input-control" placeholder="e.g. Rajesh Kumar Singh">
                     </div>
                     <div>
-                        <label class="control-label">Mobile Number *</label>
-                        <input type="text" id="addConMobile" class="input-control" required placeholder="10-digit mobile number">
+                        <label class="control-label">DoB / DoA (जन्म तिथि / अनुबंध तिथि)</label>
+                        <input type="text" id="addConDob" class="input-control" placeholder="DD.MM.YY or YYYY-MM-DD">
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
+                        <label class="control-label">Mobile Number *</label>
+                        <input type="text" id="addConMobile" class="input-control" required placeholder="10-digit mobile number">
+                    </div>
+                    <div>
                         <label class="control-label">Email ID</label>
                         <input type="email" id="addConEmail" class="input-control" placeholder="contractor@example.com">
                     </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
                         <label class="control-label">District (ज़िला) *</label>
                         <select id="addConDistrict" class="input-control" required>
                             <!-- populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="control-label">Gender (लिंग)</label>
+                        <select id="addConGender" class="input-control">
+                            <option value="MALE">MALE</option>
+                            <option value="FEMALE">FEMALE</option>
+                            <option value="OTHER">OTHER</option>
                         </select>
                     </div>
                 </div>
@@ -2573,8 +2611,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="control-label">PAN No</label>
-                        <input type="text" id="addConPan" class="input-control" placeholder="e.g. ABCDE1234F">
+                        <label class="control-label">PAN No (10-Digit Alphanumeric)</label>
+                        <input type="text" id="addConPan" class="input-control" maxlength="10" placeholder="e.g. ABCDE1234F" style="text-transform: uppercase;" oninput="this.value=this.value.toUpperCase()">
                     </div>
                 </div>
                 <div style="margin-bottom: 12px;">
@@ -2595,7 +2633,7 @@
 
     <!-- 2. EDIT CONTRACTOR MODAL -->
     <div class="modal-overlay" id="modalEditContractorMaster" onclick="if(event.target===this) closeEditContractorModalMaster()">
-        <div class="modal-dialog" style="max-width: 700px;">
+        <div class="modal-dialog" style="max-width: 720px;">
             <div class="modal-header" style="background: #1e3a8a; color: white;">
                 <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
                     <span>✏️</span> Edit Contractor (ठेकेदार विवरण अपडेट करें)
@@ -2620,19 +2658,33 @@
                         <input type="text" id="editConDirector" class="input-control">
                     </div>
                     <div>
-                        <label class="control-label">Mobile Number *</label>
-                        <input type="text" id="editConMobile" class="input-control" required>
+                        <label class="control-label">DoB / DoA (जन्म तिथि / अनुबंध तिथि)</label>
+                        <input type="text" id="editConDob" class="input-control" placeholder="DD.MM.YY or YYYY-MM-DD">
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
+                        <label class="control-label">Mobile Number *</label>
+                        <input type="text" id="editConMobile" class="input-control" required>
+                    </div>
+                    <div>
                         <label class="control-label">Email ID</label>
                         <input type="email" id="editConEmail" class="input-control">
                     </div>
+                </div>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px;">
                     <div>
                         <label class="control-label">District (ज़िला) *</label>
                         <select id="editConDistrict" class="input-control" required>
                             <!-- populated dynamically -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="control-label">Gender (लिंग)</label>
+                        <select id="editConGender" class="input-control">
+                            <option value="MALE">MALE</option>
+                            <option value="FEMALE">FEMALE</option>
+                            <option value="OTHER">OTHER</option>
                         </select>
                     </div>
                 </div>
@@ -2658,8 +2710,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="control-label">PAN No</label>
-                        <input type="text" id="editConPan" class="input-control">
+                        <label class="control-label">PAN No (10-Digit Alphanumeric)</label>
+                        <input type="text" id="editConPan" class="input-control" maxlength="10" placeholder="e.g. ABCDE1234F" style="text-transform: uppercase;" oninput="this.value=this.value.toUpperCase()">
                     </div>
                 </div>
                 <div style="margin-bottom: 12px;">
@@ -7722,6 +7774,188 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
         let contractorMasterDistricts = [];
         let currentMatchingContractor = null;
 
+        // Dynamic Column Configuration
+        const CON_COLS = [
+            { key: 'chk', label: 'Select Checkbox', defaultVis: true, fixed: true },
+            { key: 'sl', label: 'SL. No.', defaultVis: true },
+            { key: 'appid', label: 'ApplicationID', defaultVis: true },
+            { key: 'company', label: 'Applicant / Firm / Company Name', defaultVis: true },
+            { key: 'director', label: 'Applicant Father / Director Name', defaultVis: true },
+            { key: 'dob', label: 'DoB/DoA', defaultVis: true },
+            { key: 'address', label: 'Address', defaultVis: true },
+            { key: 'district', label: 'District', defaultVis: true },
+            { key: 'cast', label: 'Cast', defaultVis: true },
+            { key: 'gender', label: 'Gender', defaultVis: true },
+            { key: 'email', label: 'Email ID', defaultVis: true },
+            { key: 'entity', label: 'Entity Type', defaultVis: true },
+            { key: 'mobile', label: 'Mobile No', defaultVis: true },
+            { key: 'pan', label: 'PAN No', defaultVis: true },
+            { key: 'actions', label: 'Actions', defaultVis: true }
+        ];
+
+        let contractorColVisibility = {};
+
+        function initContractorColumnVisibility() {
+            try {
+                const saved = localStorage.getItem('tdsc_contractor_columns_v2');
+                if (saved) {
+                    contractorColVisibility = JSON.parse(saved);
+                }
+            } catch(e) {}
+            CON_COLS.forEach(c => {
+                if (contractorColVisibility[c.key] === undefined) {
+                    contractorColVisibility[c.key] = c.defaultVis;
+                }
+            });
+            applyContractorColumnStyles();
+            renderContractorColumnDropdown();
+        }
+
+        function applyContractorColumnStyles() {
+            let styleEl = document.getElementById('contractorColStyleSheet');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'contractorColStyleSheet';
+                document.head.appendChild(styleEl);
+            }
+            let css = `
+                #contractorMasterTable .th-content { display: flex; align-items: center; justify-content: space-between; gap: 4px; }
+                #contractorMasterTable .btn-hide-col { background: transparent; border: none; color: rgba(255,255,255,0.6); cursor: pointer; font-size: 13px; font-weight: bold; padding: 1px 4px; border-radius: 3px; line-height: 1; transition: all 0.15s ease-in-out; }
+                #contractorMasterTable .btn-hide-col:hover { background: rgba(239, 68, 68, 0.9); color: white; }
+            `;
+            CON_COLS.forEach(c => {
+                if (contractorColVisibility[c.key] === false) {
+                    css += `
+#contractorMasterTable .col-${c.key} { display: none !important; }`;
+                }
+            });
+            styleEl.textContent = css;
+        }
+
+        function toggleContractorColumnDropdown(e) {
+            if (e) e.stopPropagation();
+            const dd = document.getElementById('conColumnsDropdown');
+            if (!dd) return;
+            const isOpen = dd.style.display === 'block';
+            dd.style.display = isOpen ? 'none' : 'block';
+        }
+
+        function closeContractorColumnDropdown() {
+            const dd = document.getElementById('conColumnsDropdown');
+            if (dd) dd.style.display = 'none';
+        }
+
+        document.addEventListener('click', (e) => {
+            const dd = document.getElementById('conColumnsDropdown');
+            const btn = document.getElementById('btnToggleConCols');
+            if (dd && dd.style.display === 'block') {
+                if (!dd.contains(e.target) && !btn?.contains(e.target)) {
+                    dd.style.display = 'none';
+                }
+            }
+        });
+
+        function renderContractorColumnDropdown() {
+            const listEl = document.getElementById('conColCheckboxesList');
+            if (!listEl) return;
+            let html = '';
+            CON_COLS.forEach(c => {
+                if (c.key === 'chk') return; // Keep checkbox column persistent
+                const isChecked = contractorColVisibility[c.key] !== false;
+                html += `
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 3px 6px; border-radius: 4px; hover: background: #f8fafc;">
+                        <input type="checkbox" ${isChecked ? 'checked' : ''} onchange="toggleContractorColumn('${c.key}', this.checked)">
+                        <span style="color: ${isChecked ? '#1e293b' : '#94a3b8'}; font-weight: ${isChecked ? '600' : 'normal'};">${escapeHtml(c.label)}</span>
+                    </label>
+                `;
+            });
+            listEl.innerHTML = html;
+        }
+
+        function toggleContractorColumn(key, isVisible) {
+            contractorColVisibility[key] = isVisible;
+            try {
+                localStorage.setItem('tdsc_contractor_columns_v2', JSON.stringify(contractorColVisibility));
+            } catch(e) {}
+            applyContractorColumnStyles();
+            renderContractorColumnDropdown();
+            const colDef = CON_COLS.find(c => c.key === key);
+            if (!isVisible && colDef) {
+                showToast(`Column "${colDef.label}" hidden. Use 'Columns' button to restore.`);
+            }
+        }
+
+        function showAllContractorColumns() {
+            CON_COLS.forEach(c => { contractorColVisibility[c.key] = true; });
+            try {
+                localStorage.setItem('tdsc_contractor_columns_v2', JSON.stringify(contractorColVisibility));
+            } catch(e) {}
+            applyContractorColumnStyles();
+            renderContractorColumnDropdown();
+            showToast("All columns restored to visible!");
+        }
+
+        function resetDefaultContractorColumns() {
+            CON_COLS.forEach(c => { contractorColVisibility[c.key] = c.defaultVis; });
+            try {
+                localStorage.removeItem('tdsc_contractor_columns_v2');
+            } catch(e) {}
+            applyContractorColumnStyles();
+            renderContractorColumnDropdown();
+            showToast("Column visibility reset to defaults!");
+        }
+
+        // Selection for Row Batch Actions
+        function toggleSelectAllContractorRows(selectAll) {
+            const chks = document.querySelectorAll('.con-row-chk');
+            chks.forEach(chk => { chk.checked = selectAll; });
+            updateContractorSelection();
+        }
+
+        function updateContractorSelection() {
+            const checkedBoxes = document.querySelectorAll('.con-row-chk:checked');
+            const count = checkedBoxes.length;
+            const btnDel = document.getElementById('conBtnDeleteSelected');
+            const spanCount = document.getElementById('conSelectedCount');
+            if (btnDel && spanCount) {
+                spanCount.textContent = count;
+                btnDel.style.display = count > 0 ? 'inline-flex' : 'none';
+            }
+            const selectAllChk = document.getElementById('chkConSelectAll');
+            const allChks = document.querySelectorAll('.con-row-chk');
+            if (selectAllChk && allChks.length > 0) {
+                selectAllChk.checked = (count === allChks.length);
+            }
+        }
+
+        async function deleteSelectedContractorRows() {
+            const chks = document.querySelectorAll('.con-row-chk:checked');
+            const ids = Array.from(chks).map(c => parseInt(c.value, 10)).filter(id => !isNaN(id));
+            if (ids.length === 0) return;
+
+            if (!confirm(`Are you sure you want to delete ${ids.length} selected contractor(s) from database? This cannot be undone.`)) return;
+
+            try {
+                const res = await fetch('/api/contractors/delete', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ ids: ids })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    showToast(data.message || `${ids.length} contractors deleted successfully.`);
+                    const selectAllChk = document.getElementById('chkConSelectAll');
+                    if (selectAllChk) selectAllChk.checked = false;
+                    updateContractorSelection();
+                    loadContractorsMasterList();
+                } else {
+                    alert("Error deleting contractors: " + (data.error || "Unknown error"));
+                }
+            } catch (err) {
+                alert("Network error: " + err.message);
+            }
+        }
+
         async function loadContractorsMasterList(page = null) {
             if (page !== null) contractorMasterPage = page;
             const searchVal = (document.getElementById('conSearchInput')?.value || '').trim();
@@ -7732,7 +7966,7 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
 
             const tbody = document.getElementById('contractorMasterTableBody');
             if (tbody) {
-                tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #1e3a8a;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading contractors from database...</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 40px; color: #1e3a8a;"><div style="font-size: 1.5rem; margin-bottom: 8px;">⏳</div>Loading contractors from database...</td></tr>`;
             }
 
             try {
@@ -7753,6 +7987,9 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 contractorMasterData = data.contractors || [];
                 contractorMasterTotal = data.total || 0;
                 contractorMasterDistricts = data.districts || [];
+
+                // Initialize Column visibility
+                initContractorColumnVisibility();
 
                 // Populate District dropdown if not populated
                 populateContractorDistrictDropdown(contractorMasterDistricts, districtVal);
@@ -7789,10 +8026,15 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 const btnNext = document.getElementById('btnConNextPage');
                 if (btnNext) btnNext.disabled = contractorMasterPage >= totalPages;
 
+                // Reset Select All
+                const selectAllChk = document.getElementById('chkConSelectAll');
+                if (selectAllChk) selectAllChk.checked = false;
+                updateContractorSelection();
+
             } catch (err) {
                 console.error("Error loading contractors master:", err);
                 if (tbody) {
-                    tbody.innerHTML = `<tr><td colspan="13" style="text-align: center; padding: 40px; color: #dc2626;">Error loading contractors database. Please verify local server is running.</td></tr>`;
+                    tbody.innerHTML = `<tr><td colspan="15" style="text-align: center; padding: 40px; color: #dc2626;">Error loading contractors database. Please verify local server is running.</td></tr>`;
                 }
             }
         }
@@ -7853,7 +8095,7 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             if (!contractors || contractors.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="14" style="text-align: center; padding: 40px; color: #64748b;">
+                        <td colspan="15" style="text-align: center; padding: 40px; color: #64748b;">
                             <div style="font-size: 1.8rem; margin-bottom: 6px;">🔍</div>
                             <strong>Koi thekedar match nahi hua.</strong>
                             <div style="font-size: 0.8rem; margin-top: 4px; color: #94a3b8;">Search keyword ya district filter badal kar check karein.</div>
@@ -7892,82 +8134,87 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
 
                 html += `
                     <tr style="border-bottom: 1px solid #e2e8f0; font-size: 0.83rem;">
+                        <!-- Checkbox -->
+                        <td class="col-chk" style="text-align: center;">
+                            <input type="checkbox" class="con-row-chk" value="${c.id}" onchange="updateContractorSelection()">
+                        </td>
+
                         <!-- 1. SL. No. -->
-                        <td style="text-align: center; font-weight: 700; color: #64748b;">${slNo}</td>
+                        <td class="col-sl" style="text-align: center; font-weight: 700; color: #64748b;">${slNo}</td>
 
                         <!-- 2. ApplicationID -->
-                        <td style="text-align: center; font-family: monospace; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
+                        <td class="col-appid" style="text-align: center; font-family: monospace; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
                             <span style="background: #eff6ff; padding: 2px 6px; border-radius: 4px; border: 1px solid #bfdbfe;">${escapeHtml(appId)}</span>
                         </td>
 
                         <!-- 3. Applicant/Firm/Company Name -->
-                        <td style="font-weight: 800; color: #0f172a; max-width: 220px;">
+                        <td class="col-company" style="font-weight: 800; color: #0f172a; max-width: 220px;">
                             ${escapeHtml(firm)}
                         </td>
 
                         <!-- 4. Applicant Father/Director Name -->
-                        <td style="color: #334155; font-weight: 600;">
+                        <td class="col-director" style="color: #334155; font-weight: 600;">
                             ${escapeHtml(director)}
                         </td>
 
                         <!-- 5. DoB/DoA -->
-                        <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
+                        <td class="col-dob" style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
                             ${escapeHtml(dob)}
                         </td>
 
                         <!-- 6. Address -->
-                        <td style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
+                        <td class="col-address" style="max-width: 220px; font-size: 0.76rem; color: #64748b; line-height: 1.3;" title="${escapeHtml(addr)}">
                             ${escapeHtml(addr.length > 70 ? addr.substring(0, 70) + '...' : addr)}
                         </td>
 
                         <!-- 7. District -->
-                        <td style="text-align: center;">
+                        <td class="col-district" style="text-align: center;">
                             <span style="background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; padding: 2px 8px; border-radius: 12px; font-weight: 700; font-size: 0.76rem; white-space: nowrap;">
                                 📍 ${escapeHtml(dist)}
                             </span>
                         </td>
 
                         <!-- 8. Cast -->
-                        <td style="text-align: center; white-space: nowrap;">
+                        <td class="col-cast" style="text-align: center; white-space: nowrap;">
                             <span style="background: #fefce8; border: 1px solid #fef08a; color: #854d0e; padding: 2px 6px; border-radius: 4px; font-weight: 700; font-size: 0.72rem;">${escapeHtml(cast)}</span>
                         </td>
 
                         <!-- 9. Gender -->
-                        <td style="text-align: center; font-size: 0.76rem; font-weight: 600; color: #475569; white-space: nowrap;">
+                        <td class="col-gender" style="text-align: center; font-size: 0.76rem; font-weight: 600; color: #475569; white-space: nowrap;">
                             ${escapeHtml(gender)}
                         </td>
 
                         <!-- 10. Email ID -->
-                        <td style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
+                        <td class="col-email" style="color: #475569; font-size: 0.78rem; max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${escapeHtml(email)}">
                             ${escapeHtml(email)}
                         </td>
 
                         <!-- 11. Entity Type -->
-                        <td style="text-align: center; white-space: nowrap;">
+                        <td class="col-entity" style="text-align: center; white-space: nowrap;">
                             <span style="background: #f8fafc; border: 1px solid #cbd5e1; padding: 2px 6px; border-radius: 4px; font-size: 0.72rem; color: #475569;">${escapeHtml(entity)}</span>
                         </td>
 
                         <!-- 12. Mobile No -->
-                        <td style="text-align: center; white-space: nowrap;">
+                        <td class="col-mobile" style="text-align: center; white-space: nowrap;">
                             <div>${callLink}</div>
                             ${waButton}
                         </td>
 
                         <!-- 13. PAN No -->
-                        <td style="text-align: center; font-family: monospace; font-size: 0.76rem; color: #475569; white-space: nowrap;">
-                            ${escapeHtml(pan)}
+                        <td class="col-pan" style="text-align: center; font-family: monospace; font-size: 0.76rem; font-weight: 700; color: #1e3a8a; white-space: nowrap;">
+                            ${pan && pan !== '-' ? `<span style="background: #eef2ff; color: #3730a3; padding: 2px 6px; border-radius: 4px; border: 1px solid #c7d2fe;">${escapeHtml(pan)}</span>` : '<span style="color: #94a3b8;">-</span>'}
                         </td>
 
                         <!-- 14. Actions -->
-                        <td style="text-align: center; white-space: nowrap;">
+                        <td class="col-actions" style="text-align: center; white-space: nowrap;">
                             <div style="display: flex; gap: 4px; justify-content: center; align-items: center;">
                                 <button class="btn-top" onclick="openMatchTendersForContractor(${c.id}, '${escapeJsString(dist)}', '${escapeJsString(firm)}')" style="background: #eff6ff; color: #1e40af; border: 1px solid #93c5fd; padding: 3px 8px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Match Live Tenders in this Contractor's District">
                                     🎯 Match
                                 </button>
-                                <button class="btn-top" onclick="openEditContractorModalMaster(${c.id})" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Edit Contractor Details">
+                                <button class="btn-top" onclick="openEditContractorModalMaster(${c.id})" style="background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Edit Contractor Details (संपादित करें)">
                                     ✏️
                                 </button>
-                                <button class="btn-top" onclick="deleteContractorMaster(${c.id}, '${escapeJsString(firm)}')" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Delete Contractor">
+                                <button class="btn-top" onclick="deleteContractorMaster(${c.id}, '${escapeJsString(firm)}')" style="background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; padding: 3px 7px; font-size: 0.72rem; font-weight: 700; border-radius: 4px; cursor: pointer;" title="Delete Contractor Row (हटाएं)">
                                     🗑️
                                 </button>
                             </div>
@@ -8034,12 +8281,14 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 company_name: document.getElementById('addConCompanyName').value.trim(),
                 application_id: document.getElementById('addConAppId').value.trim(),
                 director_name: document.getElementById('addConDirector').value.trim(),
+                dob_doa: document.getElementById('addConDob').value.trim(),
+                gender: document.getElementById('addConGender').value,
                 mobile: document.getElementById('addConMobile').value.trim(),
                 email: document.getElementById('addConEmail').value.trim(),
                 district: document.getElementById('addConDistrict').value,
                 entity_type: document.getElementById('addConEntity').value,
                 cast: document.getElementById('addConCast').value,
-                pan_no: document.getElementById('addConPan').value.trim(),
+                pan_no: document.getElementById('addConPan').value.trim().toUpperCase(),
                 address: document.getElementById('addConAddress').value.trim(),
                 calling_remarks: document.getElementById('addConRemarks').value.trim()
             };
@@ -8072,6 +8321,8 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             document.getElementById('editConCompanyName').value = contractor.company_name || '';
             document.getElementById('editConAppId').value = contractor.application_id || '';
             document.getElementById('editConDirector').value = contractor.director_name || '';
+            document.getElementById('editConDob').value = contractor.dob_doa || '';
+            document.getElementById('editConGender').value = contractor.gender || 'MALE';
             document.getElementById('editConMobile').value = contractor.mobile || '';
             document.getElementById('editConEmail').value = contractor.email || '';
             document.getElementById('editConDistrict').value = contractor.district || '';
@@ -8098,12 +8349,14 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 company_name: document.getElementById('editConCompanyName').value.trim(),
                 application_id: document.getElementById('editConAppId').value.trim(),
                 director_name: document.getElementById('editConDirector').value.trim(),
+                dob_doa: document.getElementById('editConDob').value.trim(),
+                gender: document.getElementById('editConGender').value,
                 mobile: document.getElementById('editConMobile').value.trim(),
                 email: document.getElementById('editConEmail').value.trim(),
                 district: document.getElementById('editConDistrict').value,
                 entity_type: document.getElementById('editConEntity').value,
                 cast: document.getElementById('editConCast').value,
-                pan_no: document.getElementById('editConPan').value.trim(),
+                pan_no: document.getElementById('editConPan').value.trim().toUpperCase(),
                 address: document.getElementById('editConAddress').value.trim(),
                 calling_remarks: document.getElementById('editConRemarks').value.trim()
             };
@@ -8127,9 +8380,9 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
             }
         }
 
-        // Delete Contractor
+        // Delete Contractor (Row Delete)
         async function deleteContractorMaster(id, name) {
-            if (!confirm(`Are you sure you want to delete contractor '${name}' from database?`)) return;
+            if (!confirm(`Are you sure you want to delete contractor '${name}' from database? This cannot be undone.`)) return;
 
             try {
                 const res = await fetch('/api/contractors/delete', {
@@ -8139,7 +8392,7 @@ Portal Link: https://eproc2.bihar.gov.in/EPSV2Web/openarea/tenderListingPage.act
                 });
                 const data = await res.json();
                 if (data.success) {
-                    showToast(`Contractor '${name}' deleted.`);
+                    showToast(`Contractor '${name}' deleted successfully.`);
                     loadContractorsMasterList();
                 } else {
                     alert("Error deleting contractor: " + (data.error || "Unknown error"));

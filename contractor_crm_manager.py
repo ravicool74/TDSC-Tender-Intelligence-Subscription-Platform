@@ -141,6 +141,17 @@ def clean_mobile(v):
         digits = digits[-10:]
     return digits if len(digits) == 10 else digits
 
+PAN_REGEX = re.compile(r'^[A-Z]{5}[0-9]{4}[A-Z]$', re.IGNORECASE)
+
+def validate_pan(val: str) -> str:
+    """Validates and returns normalized 10-char PAN or empty string."""
+    if not val:
+        return ''
+    c = str(val).strip().upper()
+    if PAN_REGEX.match(c):
+        return c
+    return ''
+
 def normalize_district(raw: str) -> str:
     if not raw:
         return 'Other / State-wide'
@@ -237,25 +248,25 @@ def import_contractors_from_workbook(file_path: str, source_label: str = 'Excel 
                 
             headers = [clean_text(c).lower() for c in rows[header_idx]]
             
-            def get_col_idx(keywords):
+            def get_col_idx(patterns):
                 for idx, h in enumerate(headers):
-                    for kw in keywords:
-                        if kw in h:
+                    for pat in patterns:
+                        if re.search(pat, h, re.IGNORECASE):
                             return idx
                 return -1
 
-            app_id_idx = get_col_idx(['application', 'reg'])
-            name_idx = get_col_idx(['applicant/firm', 'company name', 'firm', 'applicant name', 'name'])
-            father_idx = get_col_idx(['father', 'director'])
-            dob_idx = get_col_idx(['dob', 'doa'])
-            addr_idx = get_col_idx(['address'])
-            dist_idx = get_col_idx(['district'])
-            cast_idx = get_col_idx(['cast', 'caste', 'category'])
-            gender_idx = get_col_idx(['gender', 'sex'])
-            email_idx = get_col_idx(['email'])
-            entity_idx = get_col_idx(['entity'])
-            mobile_idx = get_col_idx(['mobile', 'phone', 'contact'])
-            pan_idx = get_col_idx(['pan'])
+            app_id_idx = get_col_idx([r'application', r'\breg\b'])
+            name_idx = get_col_idx([r'applicant/firm', r'company\s*name', r'\bfirm\b', r'applicant\s*name'])
+            father_idx = get_col_idx([r'father', r'director'])
+            dob_idx = get_col_idx([r'dob', r'doa'])
+            addr_idx = get_col_idx([r'address', r'addr'])
+            dist_idx = get_col_idx([r'district'])
+            cast_idx = get_col_idx([r'cast', r'caste', r'category'])
+            gender_idx = get_col_idx([r'gender', r'sex'])
+            email_idx = get_col_idx([r'email', r'mail'])
+            entity_idx = get_col_idx([r'entity', r'constitution'])
+            mobile_idx = get_col_idx([r'mobile', r'phone', r'contact'])
+            pan_idx = get_col_idx([r'\bpan\b', r'pan\s*no', r'panno'])
             notes_idx = 13 if len(headers) > 13 else -1
 
             for r in rows[header_idx+1:]:
@@ -267,6 +278,10 @@ def import_contractors_from_workbook(file_path: str, source_label: str = 'Excel 
                 comp_name = clean_text(r[name_idx]) if name_idx != -1 and name_idx < len(r) else ''
                 mob = clean_mobile(r[mobile_idx]) if mobile_idx != -1 and mobile_idx < len(r) else ''
                 
+                # Skip duplicate header rows
+                if comp_name.lower() in ('applicant/firm/company name', 'company name', 'applicant name', 'name') or app_id.lower() in ('applicationid', 'application id'):
+                    continue
+
                 if not comp_name and not mob:
                     continue
                     
@@ -284,7 +299,18 @@ def import_contractors_from_workbook(file_path: str, source_label: str = 'Excel 
                 gender = clean_text(r[gender_idx]).upper() if gender_idx != -1 and gender_idx < len(r) else ''
                 email = clean_text(r[email_idx]).lower() if email_idx != -1 and email_idx < len(r) else ''
                 entity = clean_text(r[entity_idx]).title() if entity_idx != -1 and entity_idx < len(r) else 'Individual'
-                pan = clean_text(r[pan_idx]).upper() if pan_idx != -1 and pan_idx < len(r) else ''
+                
+                # Accurate PAN resolution
+                pan = ''
+                if pan_idx != -1 and pan_idx < len(r) and r[pan_idx]:
+                    pan = validate_pan(clean_text(r[pan_idx]))
+                if not pan:
+                    for cell in r:
+                        if cell:
+                            p_val = validate_pan(clean_text(cell))
+                            if p_val:
+                                pan = p_val
+                                break
                 notes = clean_text(r[notes_idx]) if notes_idx != -1 and notes_idx < len(r) else ''
 
                 if not comp_name:
@@ -471,7 +497,7 @@ def add_contractor_entry(data: dict) -> dict:
         clean_text(data.get('cast')).upper(),
         clean_text(data.get('gender')).upper() or 'MALE',
         clean_text(data.get('entity_type') or data.get('entityType')).title() or 'Individual',
-        clean_text(data.get('pan_no') or data.get('panNo')).upper(),
+        validate_pan(data.get('pan_no') or data.get('panNo')),
         clean_text(data.get('calling_remarks') or data.get('callingRemarks')),
         clean_text(data.get('category')) or 'General Civil',
         clean_text(data.get('work_class') or data.get('workClass')) or 'Class 1',
@@ -527,7 +553,7 @@ def update_contractor_entry(cid: int, data: dict) -> dict:
         clean_text(data.get('cast')).upper(),
         clean_text(data.get('gender')).upper(),
         clean_text(data.get('entity_type') or data.get('entityType')).title(),
-        clean_text(data.get('pan_no') or data.get('panNo')).upper(),
+        validate_pan(data.get('pan_no') or data.get('panNo')),
         clean_text(data.get('calling_remarks') or data.get('callingRemarks')),
         clean_text(data.get('category')),
         clean_text(data.get('work_class') or data.get('workClass')),
@@ -539,15 +565,27 @@ def update_contractor_entry(cid: int, data: dict) -> dict:
     conn.close()
     return {"success": True, "message": "Contractor updated successfully!"}
 
-def delete_contractor_entry(cid: int) -> dict:
-    """Delete a contractor by primary key id."""
+def delete_contractor_entry(cid) -> dict:
+    """Delete a contractor by primary key id or list of IDs."""
     init_contractors_schema()
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM contractors WHERE id = ?;", (cid,))
-    conn.commit()
-    conn.close()
-    return {"success": True, "message": "Contractor deleted successfully!"}
+    if isinstance(cid, (list, tuple)):
+        ids = [int(x) for x in cid if str(x).isdigit()]
+        if ids:
+            placeholders = ','.join(['?'] * len(ids))
+            cursor.execute(f"DELETE FROM contractors WHERE id IN ({placeholders});", ids)
+            cnt = cursor.rowcount
+            conn.commit()
+            conn.close()
+            return {"success": True, "message": f"{cnt} contractor(s) deleted successfully!"}
+        conn.close()
+        return {"success": False, "error": "No valid contractor IDs provided."}
+    else:
+        cursor.execute("DELETE FROM contractors WHERE id = ?;", (int(cid),))
+        conn.commit()
+        conn.close()
+        return {"success": True, "message": "Contractor deleted successfully!"}
 
 def generate_contractors_excel_export(filters: dict = None, output_path: str = None) -> str:
     """Generate styled Excel workbook matching the Google Sheets schema."""
