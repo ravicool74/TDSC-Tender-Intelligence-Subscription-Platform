@@ -32,6 +32,7 @@ except AttributeError:
     pass
 
 # Local module imports
+import contractor_crm_manager
 from database import init_database, get_connection
 from auth import (
     register_user, login_user, logout_user, get_user_from_session,
@@ -597,54 +598,54 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
             self.send_json({"success": True, "settings": payment_gateway.get_admin_summary()})
             return
 
-        # 11b. Contractor Database & Directory (Staff & Admin Access)
+        # 11b. Contractor Database & Directory (Fast Indexed Paginated CRM)
         elif path == '/api/contractors':
-            user = self.get_current_user()
-            if not user or user.get('role') not in ['admin', 'super_admin', 'employee']:
-                self.send_json({"error": "Staff ya Admin authorization required hai."}, status=403)
-                return
+            try:
+                search_query = query.get('q', query.get('search', ['']))[0].strip()
+                district_filter = query.get('district', [''])[0].strip()
+                cast_filter = query.get('cast', [''])[0].strip()
+                entity_filter = query.get('entity_type', [''])[0].strip()
+                category_filter = query.get('category', [''])[0].strip()
+                sort_order = query.get('sort', ['name_asc'])[0].strip()
+                try:
+                    page = max(1, int(query.get('page', ['1'])[0]))
+                except ValueError:
+                    page = 1
+                try:
+                    limit = max(1, min(500, int(query.get('limit', ['50'])[0])))
+                except ValueError:
+                    limit = 50
 
-            category_filter = query.get('category', [''])[0]
-            district_filter = query.get('district', [''])[0]
-            budget_filter = query.get('budget', [''])[0]
-            search_query = query.get('q', [''])[0].strip().lower()
+                res = contractor_crm_manager.get_contractors_list(
+                    search=search_query,
+                    district=district_filter,
+                    cast=cast_filter,
+                    entity_type=entity_filter,
+                    category=category_filter,
+                    page=page,
+                    limit=limit,
+                    sort=sort_order
+                )
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
+            return
 
-            conn = get_connection()
-            cursor = conn.cursor()
-
-            sql = "SELECT * FROM contractors WHERE 1=1"
-            params = []
-
-            if category_filter and category_filter != 'all':
-                sql += " AND category = ?"
-                params.append(category_filter)
-            if district_filter and district_filter != 'all':
-                sql += " AND district = ?"
-                params.append(district_filter)
-            if budget_filter and budget_filter != 'all':
-                sql += " AND budget_slab = ?"
-                params.append(budget_filter)
-            if search_query:
-                sql += " AND (LOWER(company_name) LIKE ? OR LOWER(contact_person) LIKE ? OR mobile LIKE ? OR LOWER(district) LIKE ? OR contractor_id LIKE ?)"
-                wild = f"%{search_query}%"
-                params.extend([wild, wild, wild, wild, wild])
-
-            sql += " ORDER BY id DESC"
-            cursor.execute(sql, params)
-            contractors = [dict(r) for r in cursor.fetchall()]
-
-            cursor.execute("SELECT DISTINCT category FROM contractors ORDER BY category;")
-            categories = [r['category'] for r in cursor.fetchall() if r['category']]
-            cursor.execute("SELECT DISTINCT district FROM contractors ORDER BY district;")
-            districts = [r['district'] for r in cursor.fetchall() if r['district']]
-
-            self.send_json({
-                "success": True,
-                "contractors": contractors,
-                "categories": categories,
-                "districts": districts,
-                "totalCount": len(contractors)
-            })
+        # 11b-export. Export Contractors to Excel
+        elif path == '/api/contractors/export_xlsx':
+            try:
+                district_filter = query.get('district', [''])[0].strip()
+                out_path = contractor_crm_manager.generate_contractors_excel_export({'district': district_filter})
+                with open(out_path, 'rb') as f:
+                    content = f.read()
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+                self.send_header('Content-Disposition', 'attachment; filename="Contractors_Master_Database.xlsx"')
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
             return
 
         # 11c. Tender-to-Contractor Matcher Engine (Employee / Admin)
@@ -1594,87 +1595,73 @@ class PaidTenderRequestHandler(http.server.SimpleHTTPRequestHandler):
 
         # 11e. Staff / Admin: Create Contractor
         elif path == '/api/contractors/create':
-            user = self.get_current_user()
-            if not user or user.get('role') not in ['admin', 'super_admin', 'employee']:
-                self.send_json({"error": "Staff authorization required."}, status=403)
-                return
-
-            body = self.read_json_body()
-            company_name = body.get('companyName', '').strip()
-            contact_person = body.get('contactPerson', '').strip()
-            mobile = body.get('mobile', '').strip()
-            email = body.get('email', '').strip()
-            district = body.get('district', 'Patna').strip()
-            category = body.get('category', 'Roads & Highways').strip()
-            work_class = body.get('workClass', 'Class 1').strip()
-            budget_slab = body.get('budgetSlab', '50Lto2Cr').strip()
-            notes = body.get('notes', '').strip()
-
-            if not company_name or not mobile:
-                self.send_json({"error": "Company Name aur Mobile number required hain."}, status=400)
-                return
-
-            now_iso = datetime.now().isoformat()
-            con_id = f"TDSC-CON-{int(time.time()) % 100000}"
-
-            conn = get_connection()
-            with conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                INSERT INTO contractors (
-                    contractor_id, company_name, contact_person, mobile, email,
-                    district, category, work_class, budget_slab, status, source, notes, created_at, updated_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', 'TDSC Staff Entry', ?, ?, ?);
-                """, (con_id, company_name, contact_person, mobile, email, district, category, work_class, budget_slab, notes, now_iso, now_iso))
-                new_id = cursor.lastrowid
-
-            log_audit("CONTRACTOR_CREATED", actor_user_id=user['id'], details={"contractorId": new_id, "company": company_name, "category": category}, ip_address=ip_addr)
-            self.send_json({"success": True, "message": f"Contractor '{company_name}' successfully added to TDSC Database!", "contractorId": new_id})
+            try:
+                body = self.read_json_body()
+                res = contractor_crm_manager.add_contractor_entry(body)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=400)
             return
 
         # 11f. Staff / Admin: Update Contractor
         elif path == '/api/contractors/update':
-            user = self.get_current_user()
-            if not user or user.get('role') not in ['admin', 'super_admin', 'employee']:
-                self.send_json({"error": "Staff authorization required."}, status=403)
-                return
-
-            body = self.read_json_body()
-            cid = body.get('id')
-            if not cid:
-                self.send_json({"error": "Contractor ID required."}, status=400)
-                return
-
-            conn = get_connection()
-            with conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                UPDATE contractors SET
-                    company_name = ?, contact_person = ?, mobile = ?, email = ?,
-                    district = ?, category = ?, work_class = ?, budget_slab = ?,
-                    status = ?, notes = ?, updated_at = ?
-                WHERE id = ?;
-                """, (body.get('companyName', ''), body.get('contactPerson', ''), body.get('mobile', ''),
-                      body.get('email', ''), body.get('district', ''), body.get('category', ''),
-                      body.get('workClass', 'Class 1'), body.get('budgetSlab', '50Lto2Cr'),
-                      body.get('status', 'active'), body.get('notes', ''), datetime.now().isoformat(), cid))
-
-            self.send_json({"success": True, "message": "Contractor details updated successfully!"})
+            try:
+                body = self.read_json_body()
+                cid = body.get('id')
+                if not cid:
+                    self.send_json({"success": False, "error": "Contractor ID required."}, status=400)
+                    return
+                res = contractor_crm_manager.update_contractor_entry(cid, body)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
             return
 
         # 11g. Staff / Admin: Delete Contractor
         elif path == '/api/contractors/delete':
-            user = self.get_current_user()
-            if not user or user.get('role') not in ['admin', 'super_admin', 'employee']:
-                self.send_json({"error": "Staff authorization required."}, status=403)
-                return
+            try:
+                body = self.read_json_body()
+                cid = body.get('id')
+                if not cid:
+                    self.send_json({"success": False, "error": "Contractor ID required."}, status=400)
+                    return
+                res = contractor_crm_manager.delete_contractor_entry(cid)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
+            return
 
-            body = self.read_json_body()
-            cid = body.get('id')
-            conn = get_connection()
-            with conn:
-                conn.execute("DELETE FROM contractors WHERE id = ?;", (cid,))
-            self.send_json({"success": True, "message": "Contractor removed from database."})
+        # 11g-upload. Upload Contractor Excel (.xlsx / .csv)
+        elif path == '/api/contractors/upload_excel':
+            try:
+                body = self.read_json_body()
+                b64_content = body.get('file_content_base64', '')
+                filename = body.get('filename', 'uploaded_contractors.xlsx')
+                if not b64_content:
+                    self.send_json({"success": False, "error": "Excel file content required."}, status=400)
+                    return
+                import base64
+                file_bytes = base64.b64decode(b64_content)
+                temp_upload_path = os.path.join(os.path.dirname(__file__), 'temp_contractors_upload' + os.path.splitext(filename)[1])
+                with open(temp_upload_path, 'wb') as f:
+                    f.write(file_bytes)
+                res = contractor_crm_manager.import_contractors_from_workbook(temp_upload_path, source_label='User Excel Upload')
+                if os.path.exists(temp_upload_path):
+                    os.remove(temp_upload_path)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
+            return
+
+        # 11g-sync. Live Sync directly with Google Sheets
+        elif path == '/api/contractors/sync_google_sheet':
+            try:
+                body = self.read_json_body()
+                sheet_url = body.get('sheetUrl', '')
+                res = contractor_crm_manager.sync_from_google_sheet(sheet_url if sheet_url else None)
+                self.send_json(res)
+            except Exception as e:
+                self.send_json({"success": False, "error": str(e)}, status=500)
             return
 
         # 11h. Staff / Admin: Sync / Fetch from TDSC Office Management System

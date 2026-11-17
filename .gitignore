@@ -24,6 +24,8 @@ scratch/
 
 # Temporary Scraped Timestamped Spreadsheets
 Scraped_*.xlsx
+contractors_master_sheet.xlsx
+contractors_google_sheet_export.csv
 
 # System & Editor files
 .DS_Store

@@ -35687,19 +35687,22 @@
       "amountFormatted": "₹ 11,800.00",
       "paymentMode": "Internet Payment Gateway(IPG),Challan|"
     },
-    "tenderFolder": "c:\\e-tender\\downloads\\tender_141981_142176",
+    "tenderFolder": "C:\\e-tender\\downloads\\tender_141981_142176",
     "termsAndConditionsFiles": [],
     "attachmentsFiles": [
       {
         "label": "TENDER DOCUMENT",
         "fileName": "NIT SAND 16.10.2026.pdf",
         "attachFile": "33522/1792578593521_NIT SAND 16.10.2026.pdf|3307844|NIT SAND 16.10.2026.pdf",
-        "templategroupId": 33522
+        "templategroupId": 33522,
+        "localPath": "C:\\e-tender\\downloads\\tender_141981_142176\\attachments\\NIT SAND 16.10.2026.pdf",
+        "fileSize": 3307844,
+        "downloaded": true,
+        "webUrl": "/downloads/tender_141981_142176/attachments/NIT%20SAND%2016.10.2026.pdf"
       }
     ],
     "boqFiles": [],
-    "totalAttachmentsCount": 1,
-    "district": "Nawada"
+    "totalAttachmentsCount": 1
   },
   "142175": {
     "tenderId": 142175,
